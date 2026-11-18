@@ -81,6 +81,10 @@ PVP is a community policy, not enforced by Hackage. The realistic sequence is:
    hackage-server, explicitly marking it optional/advisory. Do not propose
    enforcement; Hackage has deliberately kept PVP optional.
 
+The tracked proposal is [issue #1](https://github.com/meillaya/pvpdiff/issues/1).
+It records the advisory boundary and the acceptance criterion: one external
+link or issue comment, with no server-side gate.
+
 ## 3. Reverse-dependency blast radius
 
 `01-index.tar.gz` is the only bulk source with dependency bounds. The reverse
