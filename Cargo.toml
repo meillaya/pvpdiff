@@ -4,6 +4,7 @@ members = [
   "crates/pvpdiff-parse",
   "crates/pvpdiff-core",
   "crates/pvpdiff-hackage",
+  "crates/pvpdiff-index",
   "crates/pvpdiff-cli",
 ]
 

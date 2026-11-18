@@ -38,6 +38,30 @@ pvpdiff's own version number does not.)
   limitations, roadmap, integration, and development guides, plus the README.
 - `examples/github-workflow.yml`: the planned advisory Action workflow (P2).
 
+### Added
+
+- `pvpdiff diff` for Hackage-to-Hackage and local Hoogle database pairs.
+  It reports a tri-state classification, confidence, observed PVP bump,
+  assessment, suggested next version, per-class counts, and a grouped change
+  list in text, JSON, or Markdown.
+- Hoogle text parser: module sections, functions, data/newtype heads,
+  constructors, record fields, GADTs, pattern synonyms, type synonyms, type and
+  data families, classes with `where {}` blocks, fixities, instances,
+  deprecation flags, and embedded `@package`/`@version` validation.
+- Cabal adapter over `cabalist-parser` with `reexported-modules`, common-stanza
+  resolution, conditional surface detection, and library dependency extraction.
+- Normalizer with whitespace and pragma cleanup, `*`/`Type` handling,
+  alpha-renaming, context sorting, synonym/family uncertainty, primitive-type
+  and hole guards, qualification removal for instances, and a renderer-era
+  guard.
+- PVP rule catalog (`pvpdiff rules`), conservative defaults, `--strict`,
+  `--include-internal`, and `--fail-on` with exit code 100.
+- Hackage client with a content cache, ETag and Last-Modified revalidation,
+  offline mode, SHA-256 provenance, and documented redirect handling.
+- `pvpdiff schema` prints the committed report schema
+  (`schemas/pvpdiff-v1.schema.json`); `pvpdiff cache dir|clean` manages the
+  local cache.
+
 ### Changed
 
 - The initial project plan narrows the promise from "PVP compliance" to
@@ -52,6 +76,6 @@ pvpdiff's own version number does not.)
 
 ### Known limitations
 
-- Only the scaffold exists at this commit. The parser, diff, classification,
-  SARIF output, local mode, reverse-dependency blast radius, and survey are
-  delivered in phases P1-P4; see `docs/roadmap.md`.
+- The golden-pair fixtures, SARIF output, local build mode, reverse-dependency
+  blast radius, and survey are delivered in later commits; see
+  `docs/roadmap.md`.

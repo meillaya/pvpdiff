@@ -1,0 +1,28 @@
+[package]
+name = "pvpdiff-index"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Hackage index sync and reverse-dependency blast radius for pvpdiff"
+
+[dependencies]
+cabalist-parser.workspace = true
+flate2.workspace = true
+hex.workspace = true
+pvpdiff-core = { path = "../pvpdiff-core" }
+pvpdiff-parse = { path = "../pvpdiff-parse" }
+reqwest.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tar.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

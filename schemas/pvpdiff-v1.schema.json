@@ -1,0 +1,473 @@
+{
+  "$defs": {
+    "Assessment": {
+      "description": "Result of comparing a change classification with the observed version bump.",
+      "oneOf": [
+        {
+          "const": "consistent",
+          "description": "The observed bump does not contradict the classification.",
+          "type": "string"
+        },
+        {
+          "const": "violation-candidate",
+          "description": "The classification requires a larger bump than observed.",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "description": "The data does not support an assessment.",
+          "type": "string"
+        }
+      ]
+    },
+    "Bump": {
+      "description": "How the version number changed between two releases.",
+      "oneOf": [
+        {
+          "const": "major",
+          "description": "The major version `A.B` changed.",
+          "type": "string"
+        },
+        {
+          "const": "minor",
+          "description": "The minor version `C` changed.",
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "description": "Only extra components changed, or components were appended.",
+          "type": "string"
+        },
+        {
+          "const": "none",
+          "description": "The versions are equal.",
+          "type": "string"
+        }
+      ]
+    },
+    "Change": {
+      "description": "One reported change.",
+      "properties": {
+        "after": {
+          "description": "New signature or declaration head.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "before": {
+          "description": "Old signature or declaration head.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "classification": {
+          "$ref": "#/$defs/Classification",
+          "description": "Classification of this change."
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence",
+          "description": "Confidence in the classification."
+        },
+        "counted": {
+          "description": "Whether the change contributes to the verdict.",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "Stable identifier assigned after sorting and grouping.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Entity kind or `module`, `instance`, `fixity`, `reexport`.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Short explanation for the report.",
+          "type": "string"
+        },
+        "modules": {
+          "description": "Modules affected by the change.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Entity or module name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "Parent data type for constructors and fields.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rule": {
+          "description": "Rule identifier from the catalog.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "rule",
+        "classification",
+        "confidence",
+        "kind",
+        "modules",
+        "counted",
+        "message"
+      ],
+      "type": "object"
+    },
+    "Classification": {
+      "description": "Aggregate or per-change PVP classification.",
+      "oneOf": [
+        {
+          "const": "breaking",
+          "description": "A breaking change candidate; a major version bump is required.",
+          "type": "string"
+        },
+        {
+          "const": "additive",
+          "description": "Additions only; a minor version bump is required.",
+          "type": "string"
+        },
+        {
+          "const": "none",
+          "description": "No public API change.",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "description": "The data does not support a decision.",
+          "type": "string"
+        }
+      ]
+    },
+    "Confidence": {
+      "description": "Confidence in one classification.",
+      "oneOf": [
+        {
+          "const": "high",
+          "description": "The data directly supports the classification.",
+          "type": "string"
+        },
+        {
+          "const": "medium",
+          "description": "The classification is likely but depends on a heuristic.",
+          "type": "string"
+        },
+        {
+          "const": "low",
+          "description": "The classification is a fallback.",
+          "type": "string"
+        }
+      ]
+    },
+    "Counts": {
+      "description": "Per-class change counts.",
+      "properties": {
+        "additive": {
+          "description": "Additive changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "breaking": {
+          "description": "Breaking changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "internal": {
+          "description": "Changes in internal-named modules that were not counted.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "none": {
+          "description": "No-op changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unknown": {
+          "description": "Unknown changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "breaking",
+        "additive",
+        "none",
+        "unknown",
+        "internal"
+      ],
+      "type": "object"
+    },
+    "Diagnostic": {
+      "description": "One report diagnostic.",
+      "properties": {
+        "code": {
+          "description": "Stable code.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Explanation.",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "description": "Diagnostic severity."
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "type": "object"
+    },
+    "InputInfo": {
+      "description": "One package side as rendered in the report.",
+      "properties": {
+        "apiStatus": {
+          "description": "`known` when a Hoogle database was available.",
+          "type": "string"
+        },
+        "cabalRevision": {
+          "description": "Latest Cabal revision, when present.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cabalSha256": {
+          "description": "Cabal digest.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cabalUrl": {
+          "description": "Cabal artifact URL.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docsSha256": {
+          "description": "Docs digest.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docsUrl": {
+          "description": "Docs artifact provenance.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "description": "Version.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "apiStatus"
+      ],
+      "type": "object"
+    },
+    "InputRecord": {
+      "description": "One report input record.",
+      "properties": {
+        "kind": {
+          "description": "Artifact kind (`hoogle` or `cabal`).",
+          "type": "string"
+        },
+        "package": {
+          "description": "Package name.",
+          "type": "string"
+        },
+        "sha256": {
+          "description": "SHA-256 of the bytes.",
+          "type": "string"
+        },
+        "version": {
+          "description": "Package version.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "package",
+        "version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "PvpSummary": {
+      "description": "PVP summary.",
+      "properties": {
+        "assessment": {
+          "$ref": "#/$defs/Assessment",
+          "description": "Assessment against the observed bump."
+        },
+        "observedBump": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bump"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Observed version bump, or null when versions cannot be parsed."
+        },
+        "rationale": {
+          "description": "Reasons for the assessment.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "suggestedVersion": {
+          "description": "Suggested next version.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "assessment",
+        "rationale"
+      ],
+      "type": "object"
+    },
+    "Severity": {
+      "description": "Severity of a diagnostic.",
+      "oneOf": [
+        {
+          "const": "warning",
+          "description": "The analysis is incomplete or a decision is unsafe.",
+          "type": "string"
+        },
+        {
+          "const": "info",
+          "description": "Useful context only.",
+          "type": "string"
+        }
+      ]
+    },
+    "ToolInfo": {
+      "description": "Tool identity embedded in every report.",
+      "properties": {
+        "name": {
+          "description": "Binary name.",
+          "type": "string"
+        },
+        "version": {
+          "description": "Binary version.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Complete diff report, schema version 1.",
+  "properties": {
+    "changes": {
+      "description": "Sorted changes.",
+      "items": {
+        "$ref": "#/$defs/Change"
+      },
+      "type": "array"
+    },
+    "classification": {
+      "$ref": "#/$defs/Classification",
+      "description": "Aggregate classification."
+    },
+    "confidence": {
+      "$ref": "#/$defs/Confidence",
+      "description": "Confidence in the aggregate classification."
+    },
+    "counts": {
+      "$ref": "#/$defs/Counts",
+      "description": "Per-class counts."
+    },
+    "diagnostics": {
+      "description": "Diagnostics.",
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      },
+      "type": "array"
+    },
+    "from": {
+      "$ref": "#/$defs/InputInfo",
+      "description": "Old version and provenance."
+    },
+    "inputs": {
+      "description": "Input digests.",
+      "items": {
+        "$ref": "#/$defs/InputRecord"
+      },
+      "type": "array"
+    },
+    "package": {
+      "description": "Package name.",
+      "type": "string"
+    },
+    "pvp": {
+      "$ref": "#/$defs/PvpSummary",
+      "description": "PVP summary."
+    },
+    "schema": {
+      "description": "Schema version.",
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "to": {
+      "$ref": "#/$defs/InputInfo",
+      "description": "New version and provenance."
+    },
+    "tool": {
+      "$ref": "#/$defs/ToolInfo",
+      "description": "Tool identity."
+    }
+  },
+  "required": [
+    "schema",
+    "tool",
+    "package",
+    "from",
+    "to",
+    "classification",
+    "confidence",
+    "counts",
+    "pvp",
+    "changes",
+    "diagnostics",
+    "inputs"
+  ],
+  "title": "Report",
+  "type": "object"
+}

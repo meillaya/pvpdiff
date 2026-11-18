@@ -1397,6 +1397,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pvpdiff-index"
+version = "0.1.0"
+dependencies = [
+ "cabalist-parser",
+ "flate2",
+ "hex",
+ "pvpdiff-core",
+ "pvpdiff-parse",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tar",
+ "tempfile",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "pvpdiff-parse"
 version = "0.1.0"
 dependencies = [
