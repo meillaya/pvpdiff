@@ -1,0 +1,24 @@
+[package]
+name = "pvpdiff-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "API normalization, PVP classification, and report generation for pvpdiff"
+
+[dependencies]
+pvpdiff-parse = { path = "../pvpdiff-parse" }
+schemars.workspace = true
+serde.workspace = true
+serde-sarif.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

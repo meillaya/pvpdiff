@@ -1,0 +1,17 @@
+require_version: ">=2.4"
+
+inputs:
+  nixpkgs:
+    url: github:NixOS/nixpkgs/d5cc6833999746cffdfe0598f7bc801a57b887a9
+  rust-overlay:
+    url: github:oxalica/rust-overlay/67f1944c7c99d8dbb57fa3d83043bc0a92cbcc56
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+  devenv:
+    url: github:cachix/devenv/b904dcb51fe48c30db250038241507f60752f222
+
+imports:
+  - ./devenv.nix
+
+shell: bash

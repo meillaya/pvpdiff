@@ -1,0 +1,36 @@
+# cargo-deny configuration. Checked in CI by .github/workflows/deny.yml.
+# Run locally with `cargo deny check`.
+
+[advisories]
+# Vulnerabilities, unsoundness, and yanked crates are errors by default.
+db-urls = ["https://github.com/RustSec/advisory-db"]
+
+[bans]
+# Duplicate versions are a warning, not a build breaker: GPL-free dependency
+# trees routinely carry several semver-incompatible copies of small crates.
+multiple-versions = "warn"
+wildcards = "allow"
+
+[licenses]
+# Licenses not listed here are denied. blake3 is CC0-1.0 OR Apache-2.0, and
+# the remaining tree is permissively licensed.
+confidence-threshold = 0.93
+allow = [
+  "Apache-2.0",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "CC0-1.0",
+  "MPL-2.0",
+  "Unlicense",
+  "CDLA-Permissive-2.0",
+]
+
+[sources]
+# Everything must come from crates.io; no git or unknown registries.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

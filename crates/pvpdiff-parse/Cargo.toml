@@ -1,0 +1,20 @@
+[package]
+name = "pvpdiff-parse"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Hoogle .txt and .cabal parsing for pvpdiff"
+
+[dependencies]
+cabalist-parser.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true
