@@ -1,8 +1,8 @@
 # CLI contract
 
-Status: P1 and P2 ship `diff`, `check`, `schema`, `rules`, and `cache`.
-`index` and `blast-radius` arrive with P3; the survey arrives with P4.
-Commands are added to [CHANGELOG.md](../CHANGELOG.md) when they land.
+Status: P1 through P3 ship `diff`, `check`, `index`, `blast-radius`, `schema`,
+`rules`, and `cache`. The survey arrives with P4. Commands are added to
+[CHANGELOG.md](../CHANGELOG.md) when they land.
 
 ## Commands
 
@@ -23,8 +23,11 @@ pvpdiff check --package-dir <dir> [--against latest|previous|<ver>]
 
 pvpdiff blast-radius --package <pkg> --new-version <ver>
                      [--stackage <snapshot>] [--json-out <file>]
+                     [--format text|json] [--limit <rows>]
+                     [--cache-dir <dir>] [--offline] [--refresh]
 
-pvpdiff index sync|status [--cache-dir <dir>]
+pvpdiff index sync|status [--cache-dir <dir>] [--offline] [--refresh]
+                          [--index-url <url>]
 pvpdiff survey run|report [--limit N] [--jobs N] [--shard N/M] [--out <file>]
 pvpdiff schema [report|blast-radius|survey]
 pvpdiff rules [--format text|json]
@@ -54,8 +57,13 @@ $ pvpdiff check --package-dir . --against latest --sarif pvpdiff.sarif
 $ pvpdiff diff --package mypkg --from 1.2.3 --to 1.3.0 --fail-on breaking
 
 # reverse-dependency bounds, after an explicit index sync
-$ pvpdiff index sync
-$ pvpdiff blast-radius --package text --new-version 2.1.4
+$ pvpdiff index sync --cache-dir ~/.cache/pvpdiff
+$ pvpdiff blast-radius --package text --new-version 2.1.4 \
+    --cache-dir ~/.cache/pvpdiff --limit 20
+
+# filter the report to a Stackage snapshot
+$ pvpdiff blast-radius --package text --new-version 2.1.4 \
+    --stackage lts-24.67
 ```
 
 ## Output rules
@@ -93,5 +101,8 @@ cargo-semver-checks' exit-code convention.
   both are cached with provenance digests in the report.
 - `pvpdiff cache dir` prints the cache root; the layout is
   `<root>/hackage/<pkg>/<ver>/`.
-- `pvpdiff schema` prints the committed JSON Schema; `pvpdiff rules` prints the
-  stable rule catalog used by JSON and SARIF.
+- `pvpdiff schema [report|blast-radius]` prints the committed JSON Schema;
+  `pvpdiff rules` prints the stable rule catalog used by JSON and SARIF.
+- `pvpdiff index sync` is a conditional GET of the 141 MB `01-index.tar.gz`.
+  It writes a JSONL dependency database and metadata under `<cache>/index/`.
+  A warm run uses the ETag and returns `304` without reparsing.

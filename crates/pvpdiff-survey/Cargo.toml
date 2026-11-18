@@ -1,0 +1,26 @@
+[package]
+name = "pvpdiff-survey"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Resumable all-Hackage PVP survey for pvpdiff"
+
+[dependencies]
+pvpdiff-core = { path = "../pvpdiff-core" }
+pvpdiff-hackage = { path = "../pvpdiff-hackage" }
+pvpdiff-index = { path = "../pvpdiff-index" }
+pvpdiff-parse = { path = "../pvpdiff-parse" }
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

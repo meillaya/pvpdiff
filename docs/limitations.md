@@ -41,6 +41,20 @@ report is not mistaken for a compatibility guarantee.
 - Hackage docs may be built with a different GHC/base than the consumer's
   compiler; instance sets can differ for reasons unrelated to the package.
 
+## Blast-radius limits
+
+- The engine reads the latest revision of every package version in
+  `01-index.tar.gz`, selects the newest version of each dependent, and evaluates
+  the declared library bounds. Test-suite and benchmark dependencies are not
+  counted in the P3 report.
+- The count is an index-based approximation. Hackage's reverse-dependency page
+  is a useful sanity check, but its latest-version policy and curation can
+  differ from the index snapshot; always report the index digest with a count.
+- A dependent whose newest version dropped the target package is not a reverse
+  dependency, even when an older version still declared it.
+- The index is a point-in-time archive. Sync explicitly; do not scan it per
+  query.
+
 ## Local mode limits
 
 - Requires `cabal` and a GHC that can build the package; dependency solving is

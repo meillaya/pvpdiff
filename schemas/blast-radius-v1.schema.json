@@ -1,0 +1,182 @@
+{
+  "$defs": {
+    "BlastCounts": {
+      "description": "Dependent counts per status.",
+      "properties": {
+        "compatible": {
+          "description": "Dependents whose bounded range admits the new version.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "excluded": {
+          "description": "Dependents whose range excludes the new version.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "noUpperBound": {
+          "description": "Dependents whose unbounded range admits the new version.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "overConstrained": {
+          "description": "Dependents whose minor-level bound excludes the new version.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "excluded",
+        "compatible",
+        "noUpperBound",
+        "overConstrained"
+      ],
+      "type": "object"
+    },
+    "BlastDependent": {
+      "description": "One dependency bound that a dependent declared on the target package.",
+      "properties": {
+        "component": {
+          "description": "Component that declared the dependency.",
+          "type": "string"
+        },
+        "package": {
+          "description": "Dependent package name.",
+          "type": "string"
+        },
+        "range": {
+          "description": "Declared version range on the target package.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Stable explanation of the status.",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/BlastStatus",
+          "description": "Status of this bound against the new version."
+        },
+        "version": {
+          "description": "Dependent package version that was evaluated.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "package",
+        "version",
+        "range",
+        "component",
+        "status",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "BlastSource": {
+      "description": "Index provenance for a blast-radius report.",
+      "properties": {
+        "indexEtag": {
+          "description": "ETag of the index archive, filled from the sync metadata.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "indexSha256": {
+          "description": "SHA-256 of the index archive, filled from the sync metadata.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "packageCount": {
+          "description": "Number of packages in the index database.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "versionCount": {
+          "description": "Number of package versions in the index database.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "packageCount",
+        "versionCount"
+      ],
+      "type": "object"
+    },
+    "BlastStatus": {
+      "description": "How one dependent's bounds relate to the proposed version.",
+      "oneOf": [
+        {
+          "const": "excluded",
+          "description": "The range excludes the new version and no minor-level bound explains\nthe exclusion.",
+          "type": "string"
+        },
+        {
+          "const": "compatible",
+          "description": "The range admits the new version and carries an upper bound.",
+          "type": "string"
+        },
+        {
+          "const": "no-upper-bound",
+          "description": "The range admits the new version but has no upper bound at all.",
+          "type": "string"
+        },
+        {
+          "const": "over-constrained",
+          "description": "The range excludes the new version through a minor-level bound that a\nPVP-compatible bound would admit.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Reverse-dependency report for one proposed version.",
+  "properties": {
+    "counts": {
+      "$ref": "#/$defs/BlastCounts",
+      "description": "Counts per status."
+    },
+    "dependents": {
+      "description": "Dependent bounds, sorted by package and version.",
+      "items": {
+        "$ref": "#/$defs/BlastDependent"
+      },
+      "type": "array"
+    },
+    "newVersion": {
+      "description": "Proposed version.",
+      "type": "string"
+    },
+    "package": {
+      "description": "Target package name.",
+      "type": "string"
+    },
+    "schema": {
+      "description": "Schema version.",
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/BlastSource",
+      "description": "Index provenance."
+    }
+  },
+  "required": [
+    "schema",
+    "package",
+    "newVersion",
+    "source",
+    "counts",
+    "dependents"
+  ],
+  "title": "BlastReport",
+  "type": "object"
+}

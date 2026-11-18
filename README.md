@@ -5,9 +5,10 @@ databases. The tool runs without GHC or `.hie` files, and returns a classified
 API diff, a PVP bump assessment, a suggested next version, a changelog skeleton,
 and SARIF for CI.
 
-> Status: P2. Hackage and local diffs, SARIF, the local `check` command, and
-> the composite Action are implemented; reverse-dependency blast radius and the
-> survey are next. See [roadmap](docs/roadmap.md).
+> Status: P3. Hackage and local diffs, SARIF, the local `check` command, the
+> composite Action, index sync, and reverse-dependency blast radius are
+> implemented; the survey and advisory integration are next. See
+> [roadmap](docs/roadmap.md).
 
 > Scope: `pvpdiff` reports breaking-change candidates, not proof of PVP
 > compliance. Hoogle data cannot see behaviour-only changes, roles, family
@@ -36,6 +37,11 @@ $ pvpdiff diff --package aeson --from 2.1.2.1 --to 2.2.0.0 \
     --json-out pvpdiff.json --sarif pvpdiff.sarif
 
 $ pvpdiff check --package-dir . --against latest
+```
+
+```console
+$ pvpdiff index sync
+$ pvpdiff blast-radius --package text --new-version 2.1.4
 ```
 
 Other commands:

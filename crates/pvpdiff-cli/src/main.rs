@@ -16,6 +16,10 @@ use pvpdiff_core::diff::{Diagnostic, DiffOptions};
 use pvpdiff_core::report::{ArtifactInfo, Report, SideArtifacts, build_report, unavailable_report};
 use pvpdiff_core::{Classification, PackageApi, all_rules, diff};
 use pvpdiff_hackage::{HackageClient, HackageError, sha256_hex};
+use pvpdiff_index::{
+    BlastReport, BlastStatus, IndexRow, blast_radius, fetch_snapshot, read_index, read_meta,
+    sync_index,
+};
 use pvpdiff_parse::{ApiSurface, parse_cabal, parse_hoogle_bytes};
 
 /// PVP-aware public API diff for Hackage packages.
@@ -48,6 +52,10 @@ enum Command {
     Rules(RulesArgs),
     /// Inspect or clear the local cache.
     Cache(CacheArgs),
+    /// Synchronize or inspect the Hackage index database.
+    Index(IndexArgs),
+    /// List dependent bounds that admit or exclude a proposed version.
+    BlastRadius(BlastArgs),
 }
 
 #[derive(Debug, Args)]
@@ -178,6 +186,67 @@ enum FailOn {
 }
 
 #[derive(Debug, Args)]
+struct IndexArgs {
+    #[command(subcommand)]
+    command: IndexCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum IndexCommand {
+    /// Download and rebuild the index database.
+    Sync(IndexOptions),
+    /// Print cache and database metadata.
+    Status(IndexOptions),
+}
+
+#[derive(Debug, Args)]
+struct IndexOptions {
+    /// Override the cache directory.
+    #[arg(long = "cache-dir")]
+    cache_dir: Option<PathBuf>,
+    /// Use only cached data.
+    #[arg(long)]
+    offline: bool,
+    /// Download the index even when the cached copy is current.
+    #[arg(long)]
+    refresh: bool,
+    /// Override the index URL.
+    #[arg(long = "index-url")]
+    index_url: Option<String>,
+}
+
+#[derive(Debug, Args)]
+struct BlastArgs {
+    /// Target package.
+    #[arg(long)]
+    package: String,
+    /// Proposed new version.
+    #[arg(long = "new-version")]
+    new_version: String,
+    /// Optional Stackage snapshot to filter dependents.
+    #[arg(long)]
+    stackage: Option<String>,
+    /// Write JSON to this file as well.
+    #[arg(long = "json-out")]
+    json_out: Option<PathBuf>,
+    /// Output format written to stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+    format: OutputFormat,
+    /// Maximum rows to print in text output; 0 prints all.
+    #[arg(long, default_value_t = 50)]
+    limit: usize,
+    /// Override the cache directory.
+    #[arg(long = "cache-dir")]
+    cache_dir: Option<PathBuf>,
+    /// Use only cached data.
+    #[arg(long)]
+    offline: bool,
+    /// Ignore cache freshness.
+    #[arg(long)]
+    refresh: bool,
+}
+
+#[derive(Debug, Args)]
 struct SchemaArgs {
     /// Schema name.
     #[arg(value_enum, default_value_t = SchemaName::Report)]
@@ -188,6 +257,8 @@ struct SchemaArgs {
 enum SchemaName {
     /// The diff report.
     Report,
+    /// The reverse-dependency blast-radius report.
+    BlastRadius,
 }
 
 #[derive(Debug, Args)]
@@ -244,6 +315,8 @@ fn run(cli: Cli) -> Result<u8> {
         Command::Schema(args) => run_schema(args),
         Command::Rules(args) => run_rules(args),
         Command::Cache(args) => run_cache(args),
+        Command::Index(args) => run_index(args),
+        Command::BlastRadius(args) => run_blast_radius(args),
     }
 }
 
@@ -787,6 +860,124 @@ fn resolve_baseline(
     bail!("no Hackage Hoogle database with docs found for {package} ({against})")
 }
 
+fn run_index(args: IndexArgs) -> Result<u8> {
+    match args.command {
+        IndexCommand::Sync(options) => {
+            let cache = cache_dir(options.cache_dir.as_ref())?;
+            let meta = sync_index(
+                &cache,
+                options.index_url.as_deref(),
+                options.offline,
+                options.refresh,
+            )
+            .context("synchronize the Hackage index")?;
+            println!(
+                "index: {} packages, {} versions, {} parse skips",
+                meta.packages, meta.versions, meta.parse_skips
+            );
+            println!("sha256: {}", meta.index_sha256);
+        }
+        IndexCommand::Status(options) => {
+            let cache = cache_dir(options.cache_dir.as_ref())?;
+            let meta = read_meta(&cache)?
+                .context("the index is not cached; run `pvpdiff index sync` first")?;
+            println!("cache: {}", cache.join("index").display());
+            println!("index: {}", meta.index_url);
+            println!("sha256: {}", meta.index_sha256);
+            println!(
+                "packages: {} versions: {} parse skips: {}",
+                meta.packages, meta.versions, meta.parse_skips
+            );
+        }
+    }
+    Ok(0)
+}
+
+fn run_blast_radius(args: BlastArgs) -> Result<u8> {
+    let cache = cache_dir(args.cache_dir.as_ref())?;
+    let meta =
+        read_meta(&cache)?.context("the index is not cached; run `pvpdiff index sync` first")?;
+    let rows: Vec<IndexRow> = read_index(&cache)?;
+    let snapshot = match args.stackage.as_deref() {
+        Some(name) => {
+            if args.offline {
+                bail!("--offline cannot fetch a Stackage snapshot; drop --stackage");
+            }
+            Some(fetch_snapshot(name)?)
+        }
+        None => None,
+    };
+    let mut report = blast_radius(&rows, &args.package, &args.new_version, snapshot.as_ref())?;
+    report.attach_index(&meta);
+    if let Some(path) = &args.json_out {
+        write_file(path, &report.to_json()?)?;
+    }
+    match args.format {
+        OutputFormat::Json => write_stdout(&report.to_json()?)?,
+        OutputFormat::Text | OutputFormat::Markdown => {
+            write_stdout(&render_blast(&report, args.limit))?
+        }
+    }
+    Ok(0)
+}
+
+fn render_blast(report: &BlastReport, limit: usize) -> String {
+    let mut text = String::new();
+    let _ = writeln!(
+        &mut text,
+        "pvpdiff blast radius: {} -> {}",
+        report.package, report.new_version
+    );
+    let _ = writeln!(
+        &mut text,
+        "index: {} packages, {} versions",
+        report.source.package_count, report.source.version_count
+    );
+    let _ = writeln!(
+        &mut text,
+        "counts: {} excluded, {} over-constrained, {} compatible, {} no-upper-bound",
+        report.counts.excluded,
+        report.counts.over_constrained,
+        report.counts.compatible,
+        report.counts.no_upper_bound
+    );
+    let limit = if limit == 0 {
+        report.dependents.len()
+    } else {
+        limit
+    };
+    for status in [
+        BlastStatus::Excluded,
+        BlastStatus::OverConstrained,
+        BlastStatus::NoUpperBound,
+        BlastStatus::Compatible,
+    ] {
+        let rows: Vec<_> = report
+            .dependents
+            .iter()
+            .filter(|dependent| dependent.status == status)
+            .take(limit)
+            .collect();
+        if rows.is_empty() {
+            continue;
+        }
+        let _ = writeln!(&mut text);
+        let _ = writeln!(&mut text, "{}", status.as_str());
+        for row in rows {
+            let _ = writeln!(
+                &mut text,
+                "  {} {}  {}  ({})",
+                row.package, row.version, row.range, row.reason
+            );
+        }
+    }
+    text
+}
+
+fn write_file(path: &Path, text: &str) -> Result<()> {
+    fs::write(path, text).with_context(|| format!("write {}", path.display()))
+}
+
 fn write_stdout(text: &str) -> Result<()> {
     let mut stdout = std::io::stdout().lock();
     match stdout.write_all(text.as_bytes()) {
@@ -800,6 +991,7 @@ fn write_stdout(text: &str) -> Result<()> {
 fn run_schema(args: SchemaArgs) -> Result<u8> {
     let value = match args.name {
         SchemaName::Report => Report::schema_value(),
+        SchemaName::BlastRadius => BlastReport::schema_value(),
     };
     let mut text = serde_json::to_string_pretty(&value)?;
     text.push('\n');

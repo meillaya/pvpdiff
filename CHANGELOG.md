@@ -80,12 +80,26 @@ pvpdiff's own version number does not.)
 - CI fetches the pinned fixtures before tests and adds a local-mode job that
   builds docs with GHC 9.10.3 and runs `pvpdiff check` plus SARIF assertions.
 
+- `pvpdiff index sync|status`: conditional GET of Hackage's `01-index.tar.gz`
+  streamed into a JSONL dependency database with revision last-wins semantics,
+  SHA-256 provenance, ETag reuse, offline reads, and atomic writes.
+- `pvpdiff blast-radius`: selects the newest indexed version of every dependent
+  and classifies its target bounds as `excluded`, `compatible`,
+  `no-upper-bound`, or `over-constrained`. Text and JSON output; optional
+  Stackage `cabal.config` pin filter; `pvpdiff schema blast-radius` prints the
+  committed schema.
+- Synthesized test suite for index sync, range evaluation, status rules, and
+  snapshot pins, including synthetic tar archives with duplicate revisions.
+
 ### Fixed
 
 - Lowercase functions that return their enclosing data type are no longer
   mistaken for constructors.
 - Orphan-instance detection now reads the type head after the class token.
 - Writing reports to a closed stdout pipe exits cleanly instead of panicking.
+- Reverse-dependency selection now chooses the newest version of each package
+  before filtering on the target dependency, so a package that dropped the
+  dependency is not counted through an older release.
 
 ### Changed
 
@@ -101,6 +115,6 @@ pvpdiff's own version number does not.)
 
 ### Known limitations
 
-- The golden-pair fixtures, SARIF output, local build mode, reverse-dependency
-  blast radius, and survey are delivered in later commits; see
-  `docs/roadmap.md`.
+- The survey and advisory integration are the remaining P4 work; see
+  `docs/roadmap.md`. Blast-radius counts are index-based approximations, not
+  Hackage's page counts.
