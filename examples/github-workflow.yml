@@ -1,0 +1,46 @@
+# Example pvpdiff workflow (P2)
+#
+# This example is documentation, not a workflow that runs in this repository.
+# It assumes:
+#   - the pvpdiff action is published (tag v1),
+#   - the repository is a Haskell package that builds its Haddock docs,
+#   - code scanning is enabled (or the upload step is allowed to fail).
+#
+# Findings are advisory: remove `continue-on-error` and set `fail-on: breaking`
+# only when the project deliberately wants a hard gate.
+
+name: PVP API diff
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  pvpdiff:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.10"
+          cabal-version: "3.14"
+
+      - uses: meillaya/pvpdiff@v1
+        with:
+          package-dir: .
+          against: latest
+          sarif-file: pvpdiff.sarif
+          json-file: pvpdiff.json
+          # fail-on: breaking   # opt-in gate
+
+      - uses: github/codeql-action/upload-sarif@v4
+        continue-on-error: true
+        with:
+          sarif_file: pvpdiff.sarif
+          category: pvpdiff

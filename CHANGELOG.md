@@ -24,10 +24,29 @@ pvpdiff's own version number does not.)
 - Workspace lints deny `unsafe_code` and unsafe operations in unsafe functions;
   missing docs and missing `Debug` implementations are warnings. The CLI has
   smoke tests for `--version` and `--help`.
+- CI workflows: devenv test, cargo format/clippy/test/doc, Nix flake
+  check/build, `cargo-deny`, and actionlint plus shellcheck.
+- Fixture pipeline skeleton: `scripts/fetch-fixtures.sh` (SHA-256-pinned
+  downloads; refuses unverified fixtures), `scripts/check-oracle.sh`, synthetic
+  and expected-fixture layout, and an offline-safe default test posture.
+- `docs/feasibility.md`: the research record for the Hoogle-based PVP diff,
+  including the five-pair go/no-go, coverage measurements, derivability limits,
+  prior-art survey, and data-source matrix.
+- `docs/pvp.md`: the rule catalog and the explicit PVP interpretation used by
+  the classifier.
+- Repository documentation: design, CLI and report contracts, testing,
+  limitations, roadmap, integration, and development guides, plus the README.
+- `examples/github-workflow.yml`: the planned advisory Action workflow (P2).
+
+### Changed
+
+- The initial project plan narrows the promise from "PVP compliance" to
+  "breaking-change candidates plus bump advice", because the Hoogle text
+  database cannot prove semantic compatibility. This is recorded in the
+  feasibility document, limitations, and CLI wording.
 
 ### Known limitations
 
 - Only the scaffold exists at this commit. The parser, diff, classification,
   SARIF output, local mode, reverse-dependency blast radius, and survey are
-  delivered in phases P1-P4; see `docs/roadmap.md` once the documentation
-  commit lands.
+  delivered in phases P1-P4; see `docs/roadmap.md`.

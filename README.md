@@ -1,0 +1,109 @@
+# pvpdiff
+
+**PVP-aware public API diff for Hackage packages.** Compare two versions of a
+Haskell package from Hackage's per-version Hoogle databases — no GHC, no `.hie`,
+no compilation — and get a classified API diff, a PVP bump assessment, a
+suggested next version, a changelog skeleton, and SARIF for CI.
+
+> **Status: P0 scaffold.** The repository, Nix/devenv environment, CI, and the
+> feasibility record exist. The parser, classifier, local mode, Action, and
+> blast-radius commands land in phases P1–P4; see [roadmap](docs/roadmap.md).
+
+> **Honest scope.** `pvpdiff` reports *breaking-change candidates*, not proof of
+> PVP compliance. Hoogle data cannot see behaviour-only changes, roles, family
+> equations, default method bodies, or instances for external types. The tool
+> uses a conservative `unknown` bucket and never fails CI by default. Read
+> [limitations](docs/limitations.md) before relying on it.
+
+## What it will do
+
+```console
+$ pvpdiff diff --package text --from 2.0.1 --to 2.0.2
+Classification: additive (high confidence)
+PVP: observed minor bump; assessment: consistent
+Suggested next version: 2.0.2
+
+ADDITIVE (13)
+  Data.Text
+    + decodeASCIIPrefix :: ByteString -> Maybe (Text, ByteString)
+    ...
+```
+
+Later phases add:
+
+- `pvpdiff check --package-dir . --against latest` — local working tree vs the
+  published Hackage baseline, using `cabal haddock --haddock-hoogle`.
+- `pvpdiff diff --sarif pvpdiff.sarif` — SARIF 2.1.0 for GitHub code scanning.
+- `pvpdiff blast-radius --package text --new-version 2.1.4` — which Hackage
+  dependents' bounds exclude the new version, from the cached Hackage index.
+- `pvpdiff survey` — a reproducible "PVP in the wild" dataset over Hackage.
+
+## Why this is not another API-diff tool
+
+API diffing itself has prior art: [`hackage-diff`](https://github.com/blitzcode/hackage-diff)
+(dead since 2018), [`packdiff`](https://github.com/composewell/packdiff)
+(active, Streamly CI), [`print-api`](https://github.com/Kleidukos/print-api),
+and a proposed informational packdiff job in
+[cabal#12363](https://github.com/haskell/cabal/pull/12363). What does not exist
+is the end-to-end **PVP workflow**: a stable rule catalog, PVP bump assessment
+and suggested version, a changelog skeleton, SARIF/Action integration, and
+reverse-dependency blast radius. That is the gap this project targets.
+
+The design is grounded in a five-pair go/no-go against real changelogs; see
+[`docs/feasibility.md`](docs/feasibility.md). Key measured facts:
+
+- after modest normalization, the five pairs matched the changelog severity
+  **5/5** (the naive patch-pair diff would have falsely accused a legal patch
+  release);
+- both latest and previous Hoogle databases exist for **54/74 (73%)** of random
+  packages, and 90/100 for LTS-pinned versions — so Hackage-only analysis is
+  useful but cannot be the only path;
+- exposed `*.Internal` modules and doc-build GHC instance churn are the dominant
+  false-positive sources; hence the conservative default policy and `--strict`
+  opt-in.
+
+## Development
+
+The repository uses [`devenv`](https://devenv.sh) for the default shell and a
+Nix flake for the package, checks, and apps. Both are pinned to the same
+revisions as the working `hoard` scaffold in this workspace.
+
+```console
+$ direnv allow              # or: devenv shell
+$ devenv test               # fmt + clippy + tests
+$ cargo run -p pvpdiff-cli -- --version
+
+$ nix build .#default
+$ ./result/bin/pvpdiff --version
+
+# Local mode needs GHC/cabal; they are deliberately not in the default shell:
+$ nix develop .#local
+```
+
+`nix flake check` in a read-only sandbox can be evaluated with a redirected
+cache (`HOME=/tmp/nixhome XDG_CACHE_HOME=/tmp/nixhome/.cache`); a full
+`nix build` needs a writable Nix cache. Details are in
+[development](docs/development.md).
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `crates/pvpdiff-parse` | normalized API model, Hoogle `.txt` parser, Cabal adapter |
+| `crates/pvpdiff-core` | normalization, diff, PVP rules, version math, JSON/SARIF/Markdown |
+| `crates/pvpdiff-hackage` | Hackage URLs, blocking HTTP client, ETag cache, index reader |
+| `crates/pvpdiff-cli` | the `pvpdiff` binary |
+| `docs/` | feasibility record, design, PVP rules, contracts, limits, roadmap |
+| `schemas/` | committed JSON Schemas (generated and drift-tested) |
+| `fixtures/` | synthetic fixtures committed; real Hackage fixtures fetched and SHA-256-pinned |
+
+## Contributing and commit discipline
+
+The project is built in small, green increments. Every commit that changes a
+command, rule, schema, or policy updates `CHANGELOG.md` in the same commit; see
+the [development guide](docs/development.md) for the checklist. `main` should
+always build and test.
+
+## Licence
+
+Apache-2.0. See [LICENCE](LICENCE).

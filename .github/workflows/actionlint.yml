@@ -1,0 +1,41 @@
+name: Actionlint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Lint workflows and scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Lint GitHub Actions workflows
+        run: |
+          nix shell nixpkgs#actionlint nixpkgs#shellcheck --command \
+            actionlint .github/workflows/*.yml
+
+      - name: Shellcheck shell scripts
+        run: |
+          shopt -s nullglob
+          files=(scripts/*.sh)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "no shell scripts to check yet"
+            exit 0
+          fi
+          nix shell nixpkgs#shellcheck --command shellcheck "${files[@]}"
