@@ -44,6 +44,11 @@ pvpdiff's own version number does not.)
   "breaking-change candidates plus bump advice", because the Hoogle text
   database cannot prove semantic compatibility. This is recorded in the
   feasibility document, limitations, and CLI wording.
+- P0 is verified on this machine: `nix flake check` evaluates every output,
+  `nix build .#default` produces a working `pvpdiff 0.1.0` binary, and
+  `devenv test` passes. The development guide records the read-only-sandbox
+  workaround (`XDG_RUNTIME_DIR` and a redirected Nix cache); the roadmap marks
+  P0 done.
 
 ### Known limitations
 

@@ -5,7 +5,7 @@ earlier ones. Estimates assume part-time work.
 
 | Phase | Scope | State |
 |---|---|---|
-| P0 | Repository scaffold: workspace, toolchain, devenv/flake, CI, docs skeleton, fixture pipeline, feasibility record | **In progress** |
+| P0 | Repository scaffold: workspace, toolchain, devenv/flake, CI, docs skeleton, fixture pipeline, feasibility record | **Done** |
 | P1 | Hackage diff MVP: parser, normalizer, PVP rules, version suggestion, changelog skeleton, Hackage client/cache, CLI `diff/schema/rules`, eight golden pairs | Planned |
 | P2 | SARIF, local `check` mode, composite GitHub Action, cargo-dist releases, GHC integration job | Planned |
 | P3 | Hackage index sync, reverse-dependency blast radius, Stackage filter | Planned |

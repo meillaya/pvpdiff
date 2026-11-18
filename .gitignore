@@ -5,9 +5,12 @@
 /.cache-nixpkgs-review/
 /.devenv/
 /.devenv-*/
+/.devenv-runtime/
+/.devenv-state/
 /.direnv/
 /.home/
 /.local/
+/.runtime/
 /target/
 /result
 /result-*

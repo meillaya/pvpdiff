@@ -65,7 +65,24 @@ $ nix flake check --no-build --no-update-lock-file /path/to/pvpdiff
 
 A full `nix build` needs a writable Nix store/cache; run it outside the sandbox
 or request the needed permission. Redirecting `HOME` can break rustup/other
-tools, so use it only for the Nix evaluation command.
+tools, so use it only for the Nix commands.
+
+`devenv` also creates a per-user runtime directory under `/run/user/<uid>`. In
+a read-only sandbox that fails with `Failed to create runtime directory`. Point
+it at the repository instead:
+
+```console
+$ export XDG_RUNTIME_DIR="$PWD/.runtime"
+$ mkdir -p "$XDG_RUNTIME_DIR"
+$ chmod 700 "$XDG_RUNTIME_DIR"
+
+$ nix develop --impure --command rustc --version   # 1.99.1
+$ nix build .#default && ./result/bin/pvpdiff --version
+$ nix shell github:NixOS/nixpkgs/d5cc6833999746cffdfe0598f7bc801a57b887a9#devenv -c devenv test
+```
+
+The generated `.runtime/`, `.cargo-home/`, and `result` entries are ignored by
+git.
 
 ## Locks and toolchains
 
