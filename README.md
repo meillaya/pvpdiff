@@ -1,16 +1,16 @@
 # pvpdiff
 
-**PVP-aware public API diff for Hackage packages.** Compare two versions of a
-Haskell package from Hackage's per-version Hoogle databases — no GHC, no `.hie`,
-no compilation — and get a classified API diff, a PVP bump assessment, a
-suggested next version, a changelog skeleton, and SARIF for CI.
+Compare two versions of a Haskell package from Hackage's per-version Hoogle
+databases. The tool runs without GHC or `.hie` files, and returns a classified
+API diff, a PVP bump assessment, a suggested next version, a changelog skeleton,
+and SARIF for CI.
 
-> **Status: P0 scaffold.** The repository, Nix/devenv environment, CI, and the
+> Status: P0 scaffold. The repository, Nix/devenv environment, CI, and the
 > feasibility record exist. The parser, classifier, local mode, Action, and
-> blast-radius commands land in phases P1–P4; see [roadmap](docs/roadmap.md).
+> blast-radius commands land in phases P1 to P4; see [roadmap](docs/roadmap.md).
 
-> **Honest scope.** `pvpdiff` reports *breaking-change candidates*, not proof of
-> PVP compliance. Hoogle data cannot see behaviour-only changes, roles, family
+> Scope: `pvpdiff` reports breaking-change candidates, not proof of PVP
+> compliance. Hoogle data cannot see behaviour-only changes, roles, family
 > equations, default method bodies, or instances for external types. The tool
 > uses a conservative `unknown` bucket and never fails CI by default. Read
 > [limitations](docs/limitations.md) before relying on it.
@@ -31,12 +31,14 @@ ADDITIVE (13)
 
 Later phases add:
 
-- `pvpdiff check --package-dir . --against latest` — local working tree vs the
-  published Hackage baseline, using `cabal haddock --haddock-hoogle`.
-- `pvpdiff diff --sarif pvpdiff.sarif` — SARIF 2.1.0 for GitHub code scanning.
-- `pvpdiff blast-radius --package text --new-version 2.1.4` — which Hackage
-  dependents' bounds exclude the new version, from the cached Hackage index.
-- `pvpdiff survey` — a reproducible "PVP in the wild" dataset over Hackage.
+- `pvpdiff check --package-dir . --against latest`: compare the local working
+  tree with the published Hackage baseline, using
+  `cabal haddock --haddock-hoogle`.
+- `pvpdiff diff --sarif pvpdiff.sarif`: SARIF 2.1.0 for GitHub code scanning.
+- `pvpdiff blast-radius --package text --new-version 2.1.4`: list Hackage
+  dependents whose bounds exclude the new version, from the cached Hackage
+  index.
+- `pvpdiff survey`: a reproducible "PVP in the wild" dataset over Hackage.
 
 ## Why this is not another API-diff tool
 
@@ -45,7 +47,7 @@ API diffing itself has prior art: [`hackage-diff`](https://github.com/blitzcode/
 (active, Streamly CI), [`print-api`](https://github.com/Kleidukos/print-api),
 and a proposed informational packdiff job in
 [cabal#12363](https://github.com/haskell/cabal/pull/12363). What does not exist
-is the end-to-end **PVP workflow**: a stable rule catalog, PVP bump assessment
+is the end-to-end PVP workflow: a stable rule catalog, PVP bump assessment
 and suggested version, a changelog skeleton, SARIF/Action integration, and
 reverse-dependency blast radius. That is the gap this project targets.
 
@@ -53,11 +55,11 @@ The design is grounded in a five-pair go/no-go against real changelogs; see
 [`docs/feasibility.md`](docs/feasibility.md). Key measured facts:
 
 - after modest normalization, the five pairs matched the changelog severity
-  **5/5** (the naive patch-pair diff would have falsely accused a legal patch
+  5/5 (the naive patch-pair diff would have falsely accused a legal patch
   release);
-- both latest and previous Hoogle databases exist for **54/74 (73%)** of random
-  packages, and 90/100 for LTS-pinned versions — so Hackage-only analysis is
-  useful but cannot be the only path;
+- both latest and previous Hoogle databases exist for 54/74 (73%) of random
+  packages, and 90/100 for LTS-pinned versions. Hackage-only analysis is
+  therefore useful but limited; local mode covers unpublished code;
 - exposed `*.Internal` modules and doc-build GHC instance churn are the dominant
   false-positive sources; hence the conservative default policy and `--strict`
   opt-in.

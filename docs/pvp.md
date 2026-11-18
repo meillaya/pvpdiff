@@ -129,7 +129,7 @@ from the absence of data.
 ## 5. Changelog skeleton
 
 `--format markdown` renders the analysed package's API changes as a changelog
-skeleton, grouped by `Breaking`, `Additive`, `Unknown — review`, and
+skeleton, grouped by `Breaking`, `Additive`, `Unknown: review`, and
 `Internal (not counted)`, with modules and signatures. It is a starting point
 for the maintainer's own `CHANGELOG.md`, not a replacement; behaviour changes
 must be added by hand. This is separate from pvpdiff's own changelog policy in

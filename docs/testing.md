@@ -43,7 +43,7 @@ Only the curated expectations are committed (not raw Hackage data).
 `scripts/fetch-fixtures.sh` downloads the eight pairs' docs/cabal with pinned
 SHA-256 and verifies them; tests skip with a notice when `fixtures/real/` is
 absent. CI fetches the fixtures before the test job. The expected files also
-record the dominant rule IDs, not only the aggregate verdict.
+record the dominant rule IDs and the aggregate verdict.
 
 The P1 gate is: pairs 1/6/7/8 show zero `breaking`; pairs 2–5 are classified
 `breaking`; and the report's rule/entity details match the curated items. If the

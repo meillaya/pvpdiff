@@ -68,14 +68,14 @@ Notes:
 
 PVP is a community policy, not enforced by Hackage. The realistic sequence is:
 
-1. **Action + SARIF + published dataset** — self-serve, no gatekeepers.
-2. **pvp.haskell.org tools entry** — only after a track record. The old Tools
+1. Action, SARIF, and a published dataset: self-serve, no gatekeepers.
+2. pvp.haskell.org tools entry: only after a track record. The old Tools
    section was removed rather than updated because entries were dead
    ([pvp#47](https://github.com/haskell/pvp/issues/47)).
-3. **cabal CI signal** — comment on the open informational API-diff proposal
+3. cabal CI signal: comment on the open informational API-diff proposal
    ([cabal#12363](https://github.com/haskell/cabal/pull/12363)); offer classified
    output as a later enhancement.
-4. **Hackage candidate-page advisory** — a non-gating PVP status line would
+4. Hackage candidate-page advisory: a non-gating PVP status line would
    require server work and maintainer buy-in. Route it through
    [hackage-trustees](https://github.com/haskell-infra/hackage-trustees) and
    hackage-server, explicitly marking it optional/advisory. Do not propose
