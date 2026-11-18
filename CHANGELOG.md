@@ -101,6 +101,10 @@ pvpdiff's own version number does not.)
 - Synthetic survey tests cover selection, sharding, newest-two probing, resume,
   torn-tail repair, record round-trips, and report aggregation.
 
+- Committed the P4 "PVP in the wild" dataset and report: a 10,000-package
+  alphabetical slice, 5,940 analyzed pairs, 1,146 violation candidates, and a
+  gzipped JSONL dataset with SHA-256 provenance.
+
 ### Fixed
 
 - Lowercase functions that return their enclosing data type are no longer
