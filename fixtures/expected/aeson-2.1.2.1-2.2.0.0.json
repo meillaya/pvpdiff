@@ -1,0 +1,15 @@
+{
+  "package": "aeson",
+  "from": "2.1.2.1",
+  "to": "2.2.0.0",
+  "classification": "breaking",
+  "observedBump": "major",
+  "assessment": "consistent",
+  "suggestedVersion": "2.2.0",
+  "countsAtLeast": { "breaking": 5 },
+  "requiredRules": ["pvp/module-removed", "pvp/class-declaration-changed", "pvp/signature-changed"],
+  "forbiddenRules": [],
+  "requiredChanges": [
+    { "rule": "pvp/module-removed", "name": "Data.Aeson.Parser", "module": "Data.Aeson.Parser" }
+  ]
+}

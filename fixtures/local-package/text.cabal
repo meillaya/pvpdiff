@@ -1,0 +1,11 @@
+cabal-version: 2.2
+name: text
+version: 2.0.2
+build-type: Simple
+synopsis: local-mode fixture for pvpdiff
+
+library
+  exposed-modules: Demo
+  hs-source-dirs: src
+  build-depends: base >=4.14 && <5
+  default-language: Haskell2010

@@ -1,0 +1,15 @@
+{
+  "package": "bytestring",
+  "from": "0.11.5.3",
+  "to": "0.12.0.0",
+  "classification": "breaking",
+  "observedBump": "major",
+  "assessment": "consistent",
+  "suggestedVersion": "0.12.0",
+  "countsAtLeast": { "breaking": 1, "additive": 10 },
+  "requiredRules": ["pvp/entity-kind-changed", "pvp/pattern-added", "pvp/entity-added"],
+  "forbiddenRules": [],
+  "requiredChanges": [
+    { "rule": "pvp/entity-kind-changed", "name": "ShortByteString", "module": "Data.ByteString.Short" }
+  ]
+}

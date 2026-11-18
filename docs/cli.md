@@ -1,15 +1,15 @@
 # CLI contract
 
-**Status:** P0 ships only `pvpdiff --version`/`--help`. The full surface below is
-the P1–P4 target; commands appear incrementally and are added to
-[CHANGELOG.md](../CHANGELOG.md) when they land.
+Status: P1 and P2 ship `diff`, `check`, `schema`, `rules`, and `cache`.
+`index` and `blast-radius` arrive with P3; the survey arrives with P4.
+Commands are added to [CHANGELOG.md](../CHANGELOG.md) when they land.
 
 ## Commands
 
 ```console
 pvpdiff diff --package <pkg> --from <ver> --to <ver>
              [--format text|json|markdown] [--json-out <file>] [--sarif <file>]
-             [--sarif-uri <path>] [--strict] [--include-internal]
+             [--sarif-uri <path>] [--sarif-all] [--strict] [--include-internal]
              [--fail-on never|breaking|unknown|any]
              [--cache-dir <dir>] [--offline] [--refresh]
 
@@ -18,6 +18,8 @@ pvpdiff diff --from-docs <old.txt> --to-docs <new.txt>
 
 pvpdiff check --package-dir <dir> [--against latest|previous|<ver>]
               [--docs <file>] [--no-build] [--build-dir <dir>]
+              [--format text|json|markdown] [--json-out <file>] [--sarif <file>]
+              [--fail-on never|breaking|unknown|any]
 
 pvpdiff blast-radius --package <pkg> --new-version <ver>
                      [--stackage <snapshot>] [--json-out <file>]
@@ -44,6 +46,9 @@ $ pvpdiff diff --package aeson --from 2.1.2.1 --to 2.2.0.0 \
 
 # local working tree against the latest published baseline
 $ pvpdiff check --package-dir . --against latest --format markdown
+
+# local working tree plus SARIF
+$ pvpdiff check --package-dir . --against latest --sarif pvpdiff.sarif
 
 # gate a release branch (opt-in; exit 100 on a violation candidate)
 $ pvpdiff diff --package mypkg --from 1.2.3 --to 1.3.0 --fail-on breaking

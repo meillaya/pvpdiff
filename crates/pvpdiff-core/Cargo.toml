@@ -9,6 +9,7 @@ repository.workspace = true
 description = "API normalization, PVP classification, and report generation for pvpdiff"
 
 [dependencies]
+blake3.workspace = true
 pvpdiff-parse = { path = "../pvpdiff-parse" }
 schemars.workspace = true
 serde.workspace = true

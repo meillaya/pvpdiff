@@ -5,9 +5,9 @@ databases. The tool runs without GHC or `.hie` files, and returns a classified
 API diff, a PVP bump assessment, a suggested next version, a changelog skeleton,
 and SARIF for CI.
 
-> Status: P0 scaffold. The repository, Nix/devenv environment, CI, and the
-> feasibility record exist. The parser, classifier, local mode, Action, and
-> blast-radius commands land in phases P1 to P4; see [roadmap](docs/roadmap.md).
+> Status: P2. Hackage and local diffs, SARIF, the local `check` command, and
+> the composite Action are implemented; reverse-dependency blast radius and the
+> survey are next. See [roadmap](docs/roadmap.md).
 
 > Scope: `pvpdiff` reports breaking-change candidates, not proof of PVP
 > compliance. Hoogle data cannot see behaviour-only changes, roles, family
@@ -15,26 +15,34 @@ and SARIF for CI.
 > uses a conservative `unknown` bucket and never fails CI by default. Read
 > [limitations](docs/limitations.md) before relying on it.
 
-## What it will do
+## Quick start
 
 ```console
 $ pvpdiff diff --package text --from 2.0.1 --to 2.0.2
+pvpdiff 0.1.0
+text 2.0.1 -> 2.0.2
+
 Classification: additive (high confidence)
 PVP: observed minor bump; assessment: consistent
 Suggested next version: 2.0.2
 
-ADDITIVE (13)
-  Data.Text
-    + decodeASCIIPrefix :: ByteString -> Maybe (Text, ByteString)
-    ...
+ADDITIVE (19)
+  + Data.Text.Encoding.decodeASCIIPrefix  ByteString -> (Text, ByteString)
+  ...
 ```
 
-Later phases add:
+```console
+$ pvpdiff diff --package aeson --from 2.1.2.1 --to 2.2.0.0 \
+    --json-out pvpdiff.json --sarif pvpdiff.sarif
+
+$ pvpdiff check --package-dir . --against latest
+```
+
+Other commands:
 
 - `pvpdiff check --package-dir . --against latest`: compare the local working
   tree with the published Hackage baseline, using
   `cabal haddock --haddock-hoogle`.
-- `pvpdiff diff --sarif pvpdiff.sarif`: SARIF 2.1.0 for GitHub code scanning.
 - `pvpdiff blast-radius --package text --new-version 2.1.4`: list Hackage
   dependents whose bounds exclude the new version, from the cached Hackage
   index.

@@ -1,0 +1,15 @@
+{
+  "package": "aeson",
+  "from": "2.1.1.0",
+  "to": "2.1.2.0",
+  "classification": "unknown",
+  "observedBump": "minor",
+  "assessment": "unknown",
+  "suggestedVersion": null,
+  "countsAtLeast": { "additive": 10 },
+  "requiredRules": ["pvp/entity-added"],
+  "forbiddenRules": ["pvp/entity-removed", "pvp/signature-changed", "pvp/constructor-removed", "pvp/field-removed", "pvp/module-removed"],
+  "requiredChanges": [
+    { "rule": "pvp/entity-added", "name": "AesonException", "module": "Data.Aeson" }
+  ]
+}

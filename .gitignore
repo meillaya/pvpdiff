@@ -19,3 +19,6 @@
 /dist/
 *.sarif
 pvpdiff.json
+dist-newstyle/
+local.json
+.cabal/

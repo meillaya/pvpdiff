@@ -1,0 +1,97 @@
+name: pvpdiff
+description: PVP-aware API diff for a Haskell package, with JSON and SARIF output
+
+branding:
+  icon: git-compare
+  color: purple
+
+inputs:
+  package-dir:
+    description: Directory containing the package's .cabal file
+    required: false
+    default: "."
+  against:
+    description: Hackage baseline version, latest, or previous
+    required: false
+    default: latest
+  args:
+    description: Extra arguments passed to pvpdiff check
+    required: false
+    default: ""
+  sarif-file:
+    description: SARIF output path
+    required: false
+    default: pvpdiff.sarif
+  json-file:
+    description: JSON report output path
+    required: false
+    default: pvpdiff.json
+  version:
+    description: pvpdiff release tag, for example v0.1.0, or latest
+    required: false
+    default: latest
+  fail-on:
+    description: never, breaking, unknown, or any
+    required: false
+    default: never
+
+outputs:
+  classification:
+    description: Aggregate classification from the JSON report
+    value: ${{ steps.run.outputs.classification }}
+  json-file:
+    description: Path to the JSON report
+    value: ${{ steps.run.outputs.json-file }}
+  sarif-file:
+    description: Path to the SARIF report
+    value: ${{ steps.run.outputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install pvpdiff
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="${{ inputs.version }}"
+        if [ "$version" = "latest" ]; then
+          base="https://github.com/meillaya/pvpdiff/releases/latest/download"
+        else
+          base="https://github.com/meillaya/pvpdiff/releases/download/${version}"
+        fi
+        case "$(uname -s)-$(uname -m)" in
+          Linux-x86_64) target="x86_64-unknown-linux-musl" ;;
+          Linux-aarch64) target="aarch64-unknown-linux-musl" ;;
+          Darwin-arm64) target="aarch64-apple-darwin" ;;
+          Darwin-x86_64) target="x86_64-apple-darwin" ;;
+          *)
+            echo "pvpdiff: unsupported runner $(uname -s)-$(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+        install_dir="${RUNNER_TEMP}/pvpdiff-${target}"
+        mkdir -p "$install_dir"
+        curl -fsSL "${base}/pvpdiff-cli-${target}.tar.gz" | tar -xz -C "$install_dir"
+        echo "$install_dir" >> "$GITHUB_PATH"
+
+    - name: Run pvpdiff
+      id: run
+      shell: bash
+      run: |
+        set -euo pipefail
+        json_file="${{ inputs.json-file }}"
+        sarif_file="${{ inputs.sarif-file }}"
+        pvpdiff check \
+          --package-dir "${{ inputs.package-dir }}" \
+          --against "${{ inputs.against }}" \
+          --json-out "$json_file" \
+          --sarif "$sarif_file" \
+          --fail-on "${{ inputs.fail-on }}" \
+          ${{ inputs.args }}
+        {
+          echo "classification<<EOF"
+          jq -r '.classification' "$json_file"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+        echo "json-file=${json_file}" >> "$GITHUB_OUTPUT"
+        echo "sarif-file=${sarif_file}" >> "$GITHUB_OUTPUT"

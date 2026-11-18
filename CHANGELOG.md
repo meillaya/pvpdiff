@@ -62,6 +62,31 @@ pvpdiff's own version number does not.)
   (`schemas/pvpdiff-v1.schema.json`); `pvpdiff cache dir|clean` manages the
   local cache.
 
+- `pvpdiff check`: local working-tree mode. It reads the package `.cabal`,
+  builds `cabal haddock --haddock-hoogle` under a cache build directory (or
+  accepts `--docs`), selects a Hackage baseline, and compares the two. `--no-build`
+  requires `--docs`; the multi-library limitation is reported.
+- SARIF 2.1.0 output with stable rule metadata, error/warning/note levels,
+  artifact locations, and deterministic fingerprints. Flags: `--sarif`,
+  `--sarif-uri`, `--sarif-all`.
+- The eight golden pairs are pinned by SHA-256 in `fixtures/pairs.tsv`; the
+  fetcher verifies every file and the curated expectations live in
+  `fixtures/expected/`. A golden test checks classification, assessment,
+  suggested version, counts, required/forbidden rules, and named changes.
+- Schema drift test for `schemas/pvpdiff-v1.schema.json`; report unavailability
+  now produces an `unknown` report with a diagnostic and exit code 0.
+- Composite GitHub Action (`action.yml`), workflow documentation, and
+  `dist-workspace.toml` with the generated cargo-dist release workflow.
+- CI fetches the pinned fixtures before tests and adds a local-mode job that
+  builds docs with GHC 9.10.3 and runs `pvpdiff check` plus SARIF assertions.
+
+### Fixed
+
+- Lowercase functions that return their enclosing data type are no longer
+  mistaken for constructors.
+- Orphan-instance detection now reads the type head after the class token.
+- Writing reports to a closed stdout pipe exits cleanly instead of panicking.
+
 ### Changed
 
 - The initial project plan narrows the promise from "PVP compliance" to

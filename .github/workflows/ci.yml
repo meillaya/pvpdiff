@@ -29,6 +29,9 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
+      - name: Fetch fixtures
+        run: bash scripts/fetch-fixtures.sh
+
       - name: devenv test
         run: nix shell github:NixOS/nixpkgs/d5cc6833999746cffdfe0598f7bc801a57b887a9#devenv -c devenv test
 
@@ -53,6 +56,9 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+      - name: Fetch fixtures
+        run: bash scripts/fetch-fixtures.sh
+
       - name: Tests
         run: cargo test --workspace --all-features
 
@@ -60,3 +66,28 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --workspace --no-deps
+
+  local-mode:
+    name: local check / linux
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Build the CLI
+        run: nix build .#default
+
+      - name: Build local docs and run check
+        run: |
+          nix develop .#local --command bash -euo pipefail -c '
+            cd fixtures/local-package
+            cabal haddock --haddock-hoogle --builddir dist-newstyle
+            cd ../..
+            ./result/bin/pvpdiff check               --package-dir fixtures/local-package               --against 2.0.1               --cache-dir .cache/pvpdiff               --json-out local.json
+            jq -e '"'"'.classification == "breaking"'"'"' local.json
+          '

@@ -10,6 +10,7 @@ pub mod diff;
 pub mod normalize;
 pub mod report;
 pub mod rules;
+pub mod sarif;
 pub mod version;
 
 pub use classify::{Classification, Confidence, Severity};

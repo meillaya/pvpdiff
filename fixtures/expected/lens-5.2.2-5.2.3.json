@@ -1,0 +1,15 @@
+{
+  "package": "lens",
+  "from": "5.2.2",
+  "to": "5.2.3",
+  "classification": "unknown",
+  "observedBump": "minor",
+  "assessment": "unknown",
+  "suggestedVersion": null,
+  "countsAtLeast": { "additive": 3 },
+  "requiredRules": ["pvp/entity-added"],
+  "forbiddenRules": ["pvp/entity-removed", "pvp/signature-changed", "pvp/constructor-removed", "pvp/field-removed", "pvp/module-removed", "pvp/entity-kind-changed"],
+  "requiredChanges": [
+    { "rule": "pvp/entity-added", "name": "altOf", "module": "Control.Lens.Combinators" }
+  ]
+}

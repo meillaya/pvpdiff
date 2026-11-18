@@ -1,0 +1,15 @@
+{
+  "package": "containers",
+  "from": "0.6.7",
+  "to": "0.7",
+  "classification": "breaking",
+  "observedBump": "major",
+  "assessment": "consistent",
+  "suggestedVersion": "0.7.0",
+  "countsAtLeast": { "breaking": 1 },
+  "requiredRules": ["pvp/constructor-added", "pvp/constructor-removed", "pvp/entity-added", "pvp/pattern-added"],
+  "forbiddenRules": [],
+  "requiredChanges": [
+    { "rule": "pvp/pattern-added", "name": "CyclicSCC", "module": "Data.Graph" }
+  ]
+}

@@ -1367,6 +1367,7 @@ dependencies = [
 name = "pvpdiff-core"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "insta",
  "pvpdiff-parse",
  "schemars",

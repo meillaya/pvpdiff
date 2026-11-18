@@ -1,0 +1,15 @@
+{
+  "package": "text",
+  "from": "1.2.5.0",
+  "to": "2.0",
+  "classification": "breaking",
+  "observedBump": "major",
+  "assessment": "consistent",
+  "suggestedVersion": "1.3.0",
+  "countsAtLeast": { "breaking": 20 },
+  "requiredRules": ["pvp/entity-removed", "pvp/signature-changed", "pvp/constructor-removed"],
+  "forbiddenRules": [],
+  "requiredChanges": [
+    { "rule": "pvp/constructor-removed", "name": "Array", "module": "Data.Text.Array" }
+  ]
+}

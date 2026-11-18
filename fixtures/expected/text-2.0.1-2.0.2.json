@@ -1,0 +1,15 @@
+{
+  "package": "text",
+  "from": "2.0.1",
+  "to": "2.0.2",
+  "classification": "additive",
+  "observedBump": "minor",
+  "assessment": "consistent",
+  "suggestedVersion": "2.0.2",
+  "countsAtLeast": { "additive": 15 },
+  "requiredRules": ["pvp/entity-added", "pvp/instance-added"],
+  "forbiddenRules": ["pvp/entity-removed", "pvp/signature-changed", "pvp/constructor-removed"],
+  "requiredChanges": [
+    { "rule": "pvp/entity-added", "name": "decodeASCIIPrefix", "module": "Data.Text.Encoding" }
+  ]
+}

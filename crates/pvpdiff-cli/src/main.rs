@@ -4,9 +4,11 @@
 //! and report layers, and maps outcomes to exit codes. Business logic lives in
 //! the library crates.
 
+use std::fmt::Write as _;
 use std::fs;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{Command as StdCommand, ExitCode};
 
 use anyhow::{Context, Result, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -14,7 +16,7 @@ use pvpdiff_core::diff::{Diagnostic, DiffOptions};
 use pvpdiff_core::report::{ArtifactInfo, Report, SideArtifacts, build_report, unavailable_report};
 use pvpdiff_core::{Classification, PackageApi, all_rules, diff};
 use pvpdiff_hackage::{HackageClient, HackageError, sha256_hex};
-use pvpdiff_parse::{parse_cabal, parse_hoogle_bytes};
+use pvpdiff_parse::{ApiSurface, parse_cabal, parse_hoogle_bytes};
 
 /// PVP-aware public API diff for Hackage packages.
 #[derive(Debug, Parser)]
@@ -31,10 +33,15 @@ struct Cli {
     command: Command,
 }
 
+#[allow(clippy::large_enum_variant)]
+// Clap subcommands carry their own arguments; boxing just moves the size to
+// the heap and complicates the derive.
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Compare two Hackage versions or two local Hoogle databases.
     Diff(DiffArgs),
+    /// Compare a local working tree with a published Hackage version.
+    Check(CheckArgs),
     /// Print a committed JSON Schema.
     Schema(SchemaArgs),
     /// Print the stable rule catalog.
@@ -66,12 +73,8 @@ struct DiffArgs {
     /// New Cabal file for a local diff.
     #[arg(long = "to-cabal")]
     to_cabal: Option<PathBuf>,
-    /// Output format written to stdout.
-    #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
-    format: OutputFormat,
-    /// Write the JSON report to this file as well.
-    #[arg(long = "json-out")]
-    json_out: Option<PathBuf>,
+    #[command(flatten)]
+    output: OutputArgs,
     /// Fail with exit code 100 when this condition is met.
     #[arg(long, value_enum, default_value_t = FailOn::Never)]
     fail_on: FailOn,
@@ -81,6 +84,64 @@ struct DiffArgs {
     strict: bool,
     /// Count changes in Internal/Private modules without changing the other
     /// conservative rules.
+    #[arg(long = "include-internal")]
+    include_internal: bool,
+    /// Override the cache directory.
+    #[arg(long = "cache-dir")]
+    cache_dir: Option<PathBuf>,
+    /// Use only cached artifacts.
+    #[arg(long)]
+    offline: bool,
+    /// Ignore cache freshness and refetch mutable artifacts.
+    #[arg(long)]
+    refresh: bool,
+}
+
+#[derive(Debug, Args)]
+struct OutputArgs {
+    /// Output format written to stdout.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+    format: OutputFormat,
+    /// Write the JSON report to this file as well.
+    #[arg(long = "json-out")]
+    json_out: Option<PathBuf>,
+    /// Write SARIF 2.1.0 to this file.
+    #[arg(long)]
+    sarif: Option<PathBuf>,
+    /// Repository-relative path embedded in SARIF locations.
+    #[arg(long = "sarif-uri")]
+    sarif_uri: Option<String>,
+    /// Include internal-module results in SARIF.
+    #[arg(long = "sarif-all")]
+    sarif_all: bool,
+}
+
+#[derive(Debug, Args)]
+struct CheckArgs {
+    /// Directory containing the package `.cabal` file.
+    #[arg(long = "package-dir", default_value = ".")]
+    package_dir: PathBuf,
+    /// Version to compare against: `latest`, `previous`, or an explicit version.
+    #[arg(long, default_value = "latest")]
+    against: String,
+    /// Use an existing Hoogle database instead of running `cabal haddock`.
+    #[arg(long)]
+    docs: Option<PathBuf>,
+    /// Do not build docs; requires `--docs`.
+    #[arg(long = "no-build")]
+    no_build: bool,
+    /// Build directory for the local Haddock run.
+    #[arg(long = "build-dir")]
+    build_dir: Option<PathBuf>,
+    #[command(flatten)]
+    output: OutputArgs,
+    /// Fail with exit code 100 when this condition is met.
+    #[arg(long, value_enum, default_value_t = FailOn::Never)]
+    fail_on: FailOn,
+    /// Apply the PVP-literal policy.
+    #[arg(long)]
+    strict: bool,
+    /// Count changes in Internal/Private modules.
     #[arg(long = "include-internal")]
     include_internal: bool,
     /// Override the cache directory.
@@ -179,6 +240,7 @@ fn main() -> ExitCode {
 fn run(cli: Cli) -> Result<u8> {
     match cli.command {
         Command::Diff(args) => run_diff(args),
+        Command::Check(args) => run_check(args),
         Command::Schema(args) => run_schema(args),
         Command::Rules(args) => run_rules(args),
         Command::Cache(args) => run_cache(args),
@@ -220,7 +282,7 @@ fn run_hackage_diff(args: DiffArgs) -> Result<u8> {
             ),
         }];
         let report = unavailable_report(package, &from_version, &to_version, diagnostics);
-        emit_report(&report, &args)?;
+        emit_report(&report, &args.output)?;
         return Ok(gate_exit(&report, args.fail_on));
     };
 
@@ -271,19 +333,28 @@ fn finish_diff(old: LoadedSide, new: LoadedSide, args: DiffArgs) -> Result<u8> {
         &result,
         diagnostics,
     );
-    emit_report(&report, &args)?;
+    emit_report(&report, &args.output)?;
     Ok(gate_exit(&report, args.fail_on))
 }
 
-fn emit_report(report: &Report, args: &DiffArgs) -> Result<()> {
+fn emit_report(report: &Report, args: &OutputArgs) -> Result<()> {
     if let Some(path) = &args.json_out {
         fs::write(path, report.to_json()?)
             .with_context(|| format!("write JSON report to {}", path.display()))?;
     }
+    if let Some(path) = &args.sarif {
+        let uri = args
+            .sarif_uri
+            .clone()
+            .unwrap_or_else(|| format!("{}.cabal", report.package));
+        let document = pvpdiff_core::sarif::render(report, &uri, args.sarif_all)?;
+        fs::write(path, document)
+            .with_context(|| format!("write SARIF report to {}", path.display()))?;
+    }
     match args.format {
-        OutputFormat::Text => print!("{}", report.to_text()),
-        OutputFormat::Json => print!("{}", report.to_json()?),
-        OutputFormat::Markdown => print!("{}", report.to_markdown()),
+        OutputFormat::Text => write_stdout(&report.to_text())?,
+        OutputFormat::Json => write_stdout(&report.to_json()?)?,
+        OutputFormat::Markdown => write_stdout(&report.to_markdown())?,
     }
     Ok(())
 }
@@ -450,21 +521,298 @@ fn cache_dir(override_dir: Option<&PathBuf>) -> Result<PathBuf> {
     Ok(HackageClient::default_cache_dir()?)
 }
 
+fn run_check(args: CheckArgs) -> Result<u8> {
+    let package_dir = args
+        .package_dir
+        .canonicalize()
+        .with_context(|| format!("resolve package directory {}", args.package_dir.display()))?;
+    let cabal_path = find_cabal_file(&package_dir)?;
+    let cabal_text = fs::read_to_string(&cabal_path)
+        .with_context(|| format!("read Cabal file {}", cabal_path.display()))?;
+    let parsed_cabal = parse_cabal(&cabal_text);
+    let cabal_meta = parsed_cabal
+        .meta
+        .clone()
+        .context("the local Cabal file has no usable package name and version; cannot run check")?;
+    let package = cabal_meta.name.clone();
+    let local_version = cabal_meta.version.clone();
+
+    let cache = cache_dir(args.cache_dir.as_ref())?;
+    let client = HackageClient::new(cache.clone(), args.offline, args.refresh)?;
+
+    let cabal_bytes = fs::read(&cabal_path)
+        .with_context(|| format!("read Cabal file {}", cabal_path.display()))?;
+    let local = load_local_check_side(
+        &args,
+        &package_dir,
+        &cabal_path,
+        &cabal_bytes,
+        &cache,
+        cabal_meta,
+        parsed_cabal,
+    )?;
+    let baseline = resolve_baseline(&client, &package, &local_version, &args.against)?;
+
+    if local.api.surface.package != baseline.api.surface.package {
+        bail!(
+            "the local package {} does not match the Hackage baseline {}",
+            local.api.surface.package,
+            baseline.api.surface.package
+        );
+    }
+    if local.api.surface.version == baseline.api.surface.version {
+        bail!(
+            "local version {} equals the baseline version; bump the version before checking",
+            local.api.surface.version
+        );
+    }
+
+    let result = diff(
+        &baseline.api,
+        &local.api,
+        DiffOptions {
+            strict: args.strict,
+            include_internal: args.include_internal,
+        },
+    );
+    let mut diagnostics = baseline.diagnostics.clone();
+    diagnostics.extend(local.diagnostics.clone());
+    let report = build_report(
+        &baseline.api,
+        SideArtifacts {
+            docs: baseline.docs,
+            cabal: baseline.cabal,
+        },
+        &local.api,
+        SideArtifacts {
+            docs: local.docs,
+            cabal: local.cabal,
+        },
+        &result,
+        diagnostics,
+    );
+    emit_report(&report, &args.output)?;
+    Ok(gate_exit(&report, args.fail_on))
+}
+
+fn find_cabal_file(package_dir: &Path) -> Result<PathBuf> {
+    let mut candidates = Vec::new();
+    for entry in fs::read_dir(package_dir)
+        .with_context(|| format!("list package directory {}", package_dir.display()))?
+    {
+        let entry = entry?;
+        let path = entry.path();
+        if path
+            .extension()
+            .is_some_and(|extension| extension == "cabal")
+        {
+            candidates.push(path);
+        }
+    }
+    candidates.sort();
+    match candidates.len() {
+        0 => bail!("no .cabal file found in {}", package_dir.display()),
+        1 => Ok(candidates.remove(0)),
+        _ => bail!(
+            "multiple .cabal files found in {}; point --package-dir at one package",
+            package_dir.display()
+        ),
+    }
+}
+
+fn load_local_check_side(
+    args: &CheckArgs,
+    package_dir: &Path,
+    cabal_path: &Path,
+    cabal_bytes: &[u8],
+    cache: &Path,
+    cabal_meta: pvpdiff_parse::CabalMeta,
+    parsed_cabal: pvpdiff_parse::ParsedCabal,
+) -> Result<LoadedSide> {
+    let mut diagnostics = cabal_diagnostics(&parsed_cabal.diagnostics);
+    let (docs_path, docs_bytes, surface) = if let Some(path) = args.docs.as_deref() {
+        let bytes =
+            fs::read(path).with_context(|| format!("read Hoogle database {}", path.display()))?;
+        let surface = parse_hoogle_bytes(&bytes)
+            .with_context(|| format!("parse Hoogle database {}", path.display()))?;
+        (path.to_path_buf(), bytes, surface)
+    } else {
+        if args.no_build {
+            bail!("--no-build requires --docs");
+        }
+        let build_dir = args
+            .build_dir
+            .clone()
+            .unwrap_or_else(|| cache.join("haddock"));
+        let build_dir = if build_dir.is_absolute() {
+            build_dir
+        } else {
+            package_dir.join(build_dir)
+        };
+        fs::create_dir_all(&build_dir)
+            .with_context(|| format!("create build directory {}", build_dir.display()))?;
+        eprintln!(
+            "pvpdiff: running cabal haddock in {} (build dir {})",
+            package_dir.display(),
+            build_dir.display()
+        );
+        let status = StdCommand::new("cabal")
+            .current_dir(package_dir)
+            .arg("haddock")
+            .arg("--haddock-hoogle")
+            .arg("--builddir")
+            .arg(&build_dir)
+            .status()
+            .context("failed to run cabal; install GHC and cabal or pass --docs")?;
+        if !status.success() {
+            bail!("cabal haddock failed with {status}");
+        }
+        let (path, bytes, surface) =
+            discover_local_docs(&build_dir, &cabal_meta.name, &cabal_meta.version)?;
+        (path, bytes, surface)
+    };
+    diagnostics.extend(parser_diagnostics(&surface.warnings));
+    if surface.package != cabal_meta.name || surface.version != cabal_meta.version {
+        diagnostics.push(Diagnostic {
+            code: "version-mismatch".to_string(),
+            severity: pvpdiff_core::Severity::Warning,
+            message: format!(
+                "local Hoogle database says {}-{}, Cabal file says {}-{}",
+                surface.package, surface.version, cabal_meta.name, cabal_meta.version
+            ),
+        });
+    }
+    Ok(LoadedSide {
+        api: PackageApi {
+            surface,
+            cabal: Some(cabal_meta),
+        },
+        docs: Some(ArtifactInfo {
+            url: format!("file:{}", docs_path.display()),
+            sha256: sha256_hex(&docs_bytes),
+        }),
+        cabal: Some(ArtifactInfo {
+            url: format!("file:{}", cabal_path.display()),
+            sha256: sha256_hex(cabal_bytes),
+        }),
+        diagnostics,
+    })
+}
+
+fn discover_local_docs(
+    build_dir: &Path,
+    package: &str,
+    version: &str,
+) -> Result<(PathBuf, Vec<u8>, ApiSurface)> {
+    let mut candidates = Vec::new();
+    collect_txt_files(build_dir, &mut candidates);
+    candidates.sort();
+    let mut found = Vec::new();
+    for path in candidates {
+        let Ok(bytes) = fs::read(&path) else {
+            continue;
+        };
+        let Ok(surface) = parse_hoogle_bytes(&bytes) else {
+            continue;
+        };
+        if surface.package == package && surface.version == version {
+            found.push((path, bytes, surface));
+        }
+    }
+    match found.len() {
+        0 => bail!(
+            "no Hoogle database for {package}-{version} under {}; check the cabal haddock output",
+            build_dir.display()
+        ),
+        1 => Ok(found.remove(0)),
+        _ => {
+            eprintln!("pvpdiff: multiple local Hoogle databases matched; using the first");
+            Ok(found.remove(0))
+        }
+    }
+}
+
+fn collect_txt_files(directory: &Path, output: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(directory) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_txt_files(&path, output);
+        } else if path.extension().is_some_and(|extension| extension == "txt") {
+            output.push(path);
+        }
+    }
+}
+
+fn resolve_baseline(
+    client: &HackageClient,
+    package: &str,
+    local_version: &str,
+    against: &str,
+) -> Result<LoadedSide> {
+    let candidates: Vec<String> = match against {
+        "latest" | "previous" => {
+            if client.is_offline() {
+                bail!("--offline cannot resolve `{against}`; pass an explicit baseline version");
+            }
+            let versions = client.versions(package)?;
+            let mut parsed: Vec<(pvpdiff_core::HaskellVersion, String)> = versions
+                .keys()
+                .filter_map(|version| {
+                    pvpdiff_core::HaskellVersion::parse(version)
+                        .ok()
+                        .map(|parsed| (parsed, version.clone()))
+                })
+                .collect();
+            parsed.sort();
+            parsed.reverse();
+            if against == "previous" && !parsed.is_empty() {
+                parsed.remove(0);
+            }
+            parsed.into_iter().map(|(_, version)| version).collect()
+        }
+        explicit => vec![explicit.to_string()],
+    };
+    for candidate in candidates {
+        if candidate == local_version {
+            continue;
+        }
+        match load_hackage_side(client, package, &candidate)? {
+            Some(side) => return Ok(side),
+            None => continue,
+        }
+    }
+    bail!("no Hackage Hoogle database with docs found for {package} ({against})")
+}
+
+fn write_stdout(text: &str) -> Result<()> {
+    let mut stdout = std::io::stdout().lock();
+    match stdout.write_all(text.as_bytes()) {
+        Ok(()) => Ok(()),
+        // A consumer such as `head` closing the pipe is not a tool failure.
+        Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        Err(error) => Err(error.into()),
+    }
+}
+
 fn run_schema(args: SchemaArgs) -> Result<u8> {
     let value = match args.name {
         SchemaName::Report => Report::schema_value(),
     };
     let mut text = serde_json::to_string_pretty(&value)?;
     text.push('\n');
-    print!("{text}");
+    write_stdout(&text)?;
     Ok(0)
 }
 
 fn run_rules(args: RulesArgs) -> Result<u8> {
+    let mut text = String::new();
     match args.format {
         OutputFormat::Text => {
             for rule in all_rules() {
-                println!("{}: {}", rule.id, rule.summary);
+                writeln!(&mut text, "{}: {}", rule.id, rule.summary)?;
             }
         }
         OutputFormat::Json => {
@@ -477,14 +825,16 @@ fn run_rules(args: RulesArgs) -> Result<u8> {
                     })
                 })
                 .collect();
-            println!("{}", serde_json::to_string_pretty(&rules)?);
+            text = serde_json::to_string_pretty(&rules)?;
+            text.push('\n');
         }
         OutputFormat::Markdown => {
             for rule in all_rules() {
-                println!("- `{}`: {}", rule.id, rule.summary);
+                writeln!(&mut text, "- `{}`: {}", rule.id, rule.summary)?;
             }
         }
     }
+    write_stdout(&text)?;
     Ok(0)
 }
 
@@ -493,7 +843,7 @@ fn run_cache(args: CacheArgs) -> Result<u8> {
         CacheCommand::Dir {
             cache_dir: directory,
         } => {
-            println!("{}", cache_dir(directory.as_ref())?.display());
+            write_stdout(&format!("{}\n", cache_dir(directory.as_ref())?.display()))?;
         }
         CacheCommand::Clean {
             cache_dir: directory,

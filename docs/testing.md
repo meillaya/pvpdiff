@@ -1,7 +1,8 @@
 # Testing
 
-**Status:** P0 has the crate skeleton, CLI smoke tests, and the verification
-commands. The suites below are built in P1–P4; this file is the plan of record.
+Status: P1 and P2 suites are implemented, including the eight golden pairs,
+schema drift, SARIF shape, local `check`, and the Action. P3 and P4 suites are
+added with those commands.
 
 ## 1. Default suite (offline)
 
@@ -14,7 +15,7 @@ sandbox with no network and no real Hackage fixtures. Network access is opt-in.
 | Cabal adapter | `crates/pvpdiff-parse/tests` | synthetic multi-lib, `reexported-modules`, common stanzas, conditionals, old `Cabal-Version`, malformed/truncated → `Unknown` |
 | Normalization | `crates/pvpdiff-core/tests` | alpha-renaming, context sorting, `*`/`Type`, synonyms, `$sel:`, pragmas, families → `Unknown`, era guard |
 | Diff/rules | `crates/pvpdiff-core/tests` | full rule matrix, internal policy, `--strict`, re-export grouping, constructor aggregation, instance policy, version math (0.x, 2/4 components, wildcards), assessment, suggested versions |
-| Golden pairs | `crates/pvpdiff-core/tests/golden.rs` | eight curated pairs (see §2); skips when the real fixtures are absent |
+| Golden pairs | `crates/pvpdiff-core/tests/golden_pairs.rs` | eight curated pairs (see §2); skips when the real fixtures are absent |
 | CLI | `crates/pvpdiff-cli/tests` | text/JSON/Markdown, exit codes, stdout/stderr split, `--offline`, cache behavior |
 | Cache/HTTP | `crates/pvpdiff-hackage/tests` | ETag/304, 404 docs, 429/Retry-After, redirects, truncated bodies, path traversal safety (`httpmock`) |
 | SARIF | `crates/pvpdiff-core/tests/sarif.rs` | required GitHub fields, deterministic fingerprints, insta snapshot, roundtrip via `serde-sarif` |
