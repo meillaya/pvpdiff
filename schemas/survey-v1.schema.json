@@ -1,0 +1,288 @@
+{
+  "$defs": {
+    "AnalyzedRecord": {
+      "description": "One analyzed package pair.",
+      "properties": {
+        "assessment": {
+          "$ref": "#/$defs/Assessment",
+          "description": "Assessment of the bump against the classification."
+        },
+        "changeCount": {
+          "description": "Total number of changes, including internal modules that are not\ncounted.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "classification": {
+          "$ref": "#/$defs/Classification",
+          "description": "Aggregate classification of the pair."
+        },
+        "counts": {
+          "$ref": "#/$defs/Counts",
+          "description": "Per-class change counts from the diff."
+        },
+        "diagnostics": {
+          "description": "Diagnostic codes from the diff, sorted and deduplicated.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "docsSha256": {
+          "$ref": "#/$defs/DocsDigests",
+          "description": "Digests of the two Hoogle databases."
+        },
+        "from": {
+          "description": "Older version, the PVP baseline.",
+          "type": "string"
+        },
+        "observedBump": {
+          "$ref": "#/$defs/Bump",
+          "description": "Version bump between `from` and `to`."
+        },
+        "package": {
+          "description": "Package name.",
+          "type": "string"
+        },
+        "rules": {
+          "additionalProperties": {
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Counted changes per rule identifier.",
+          "type": "object"
+        },
+        "schema": {
+          "description": "Record schema version, always [`RECORD_SCHEMA`].",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "to": {
+          "description": "Newer version, the candidate.",
+          "type": "string"
+        },
+        "unknownCount": {
+          "description": "Counted changes classified unknown.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "package",
+        "from",
+        "to",
+        "classification",
+        "observedBump",
+        "assessment",
+        "counts",
+        "rules",
+        "changeCount",
+        "unknownCount",
+        "docsSha256",
+        "diagnostics"
+      ],
+      "type": "object"
+    },
+    "Assessment": {
+      "description": "Result of comparing a change classification with the observed version bump.",
+      "oneOf": [
+        {
+          "const": "consistent",
+          "description": "The observed bump does not contradict the classification.",
+          "type": "string"
+        },
+        {
+          "const": "violation-candidate",
+          "description": "The classification requires a larger bump than observed.",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "description": "The data does not support an assessment.",
+          "type": "string"
+        }
+      ]
+    },
+    "Bump": {
+      "description": "How the version number changed between two releases.",
+      "oneOf": [
+        {
+          "const": "major",
+          "description": "The major version `A.B` changed.",
+          "type": "string"
+        },
+        {
+          "const": "minor",
+          "description": "The minor version `C` changed.",
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "description": "Only extra components changed, or components were appended.",
+          "type": "string"
+        },
+        {
+          "const": "none",
+          "description": "The versions are equal.",
+          "type": "string"
+        }
+      ]
+    },
+    "Classification": {
+      "description": "Aggregate or per-change PVP classification.",
+      "oneOf": [
+        {
+          "const": "breaking",
+          "description": "A breaking change candidate; a major version bump is required.",
+          "type": "string"
+        },
+        {
+          "const": "additive",
+          "description": "Additions only; a minor version bump is required.",
+          "type": "string"
+        },
+        {
+          "const": "none",
+          "description": "No public API change.",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "description": "The data does not support a decision.",
+          "type": "string"
+        }
+      ]
+    },
+    "Counts": {
+      "description": "Per-class change counts.",
+      "properties": {
+        "additive": {
+          "description": "Additive changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "breaking": {
+          "description": "Breaking changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "internal": {
+          "description": "Changes in internal-named modules that were not counted.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "none": {
+          "description": "No-op changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unknown": {
+          "description": "Unknown changes.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "breaking",
+        "additive",
+        "none",
+        "unknown",
+        "internal"
+      ],
+      "type": "object"
+    },
+    "DocsDigests": {
+      "description": "SHA-256 digests of the two Hoogle databases a record compared.",
+      "properties": {
+        "newer": {
+          "description": "Digest of the newer database.",
+          "type": "string"
+        },
+        "older": {
+          "description": "Digest of the older database.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "older",
+        "newer"
+      ],
+      "type": "object"
+    },
+    "SkippedRecord": {
+      "description": "One package that could not be analyzed.",
+      "properties": {
+        "package": {
+          "description": "Package name.",
+          "type": "string"
+        },
+        "probed": {
+          "description": "Versions probed for a Hoogle database, newest first.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reason": {
+          "description": "Why the package was skipped: `docs`, `fetch`, or `parse`.",
+          "type": "string"
+        },
+        "schema": {
+          "description": "Record schema version, always [`RECORD_SCHEMA`].",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "package",
+        "reason",
+        "probed"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "One survey JSONL record.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/AnalyzedRecord",
+      "description": "A pair of versions was analyzed.",
+      "properties": {
+        "outcome": {
+          "const": "analyzed",
+          "type": "string"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "type": "object"
+    },
+    {
+      "$ref": "#/$defs/SkippedRecord",
+      "description": "No pair could be analyzed.",
+      "properties": {
+        "outcome": {
+          "const": "skipped",
+          "type": "string"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "SurveyRecord"
+}

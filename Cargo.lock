@@ -1361,6 +1361,7 @@ dependencies = [
  "pvpdiff-hackage",
  "pvpdiff-index",
  "pvpdiff-parse",
+ "pvpdiff-survey",
  "serde_json",
 ]
 

@@ -91,6 +91,16 @@ pvpdiff's own version number does not.)
 - Synthesized test suite for index sync, range evaluation, status rules, and
   snapshot pins, including synthetic tar archives with duplicate revisions.
 
+- `pvpdiff survey run|report`: resumable all-Hackage survey. It groups the
+  cached index by package, probes the newest versions for Hoogle databases,
+  classifies each pair, appends analyzed/skipped JSONL records under worker
+  threads, repairs a torn tail on resume, and renders a deterministic Markdown
+  coverage and rule report.
+- Survey CLI options for limit, jobs, per-worker delay, shard, and docs probe
+  depth; `pvpdiff schema survey` prints the committed record schema.
+- Synthetic survey tests cover selection, sharding, newest-two probing, resume,
+  torn-tail repair, record round-trips, and report aggregation.
+
 ### Fixed
 
 - Lowercase functions that return their enclosing data type are no longer
@@ -115,6 +125,6 @@ pvpdiff's own version number does not.)
 
 ### Known limitations
 
-- The survey and advisory integration are the remaining P4 work; see
-  `docs/roadmap.md`. Blast-radius counts are index-based approximations, not
-  Hackage's page counts.
+- The published dataset report and advisory integration are the remaining P4
+  work; see `docs/roadmap.md`. Blast-radius counts are index-based
+  approximations, not Hackage's page counts.

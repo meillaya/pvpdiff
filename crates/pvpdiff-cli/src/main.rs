@@ -21,6 +21,7 @@ use pvpdiff_index::{
     sync_index,
 };
 use pvpdiff_parse::{ApiSurface, parse_cabal, parse_hoogle_bytes};
+use pvpdiff_survey::{SurveyOptions, record_schema, report as survey_report, run as survey_run};
 
 /// PVP-aware public API diff for Hackage packages.
 #[derive(Debug, Parser)]
@@ -56,6 +57,8 @@ enum Command {
     Index(IndexArgs),
     /// List dependent bounds that admit or exclude a proposed version.
     BlastRadius(BlastArgs),
+    /// Run or report the all-Hackage PVP survey.
+    Survey(SurveyArgs),
 }
 
 #[derive(Debug, Args)]
@@ -247,6 +250,61 @@ struct BlastArgs {
 }
 
 #[derive(Debug, Args)]
+struct SurveyArgs {
+    #[command(subcommand)]
+    command: SurveyCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum SurveyCommand {
+    /// Run the survey and append records to the JSONL file.
+    Run(SurveyRunArgs),
+    /// Aggregate a survey JSONL file into Markdown.
+    Report(SurveyReportArgs),
+}
+
+#[derive(Debug, Args)]
+struct SurveyRunArgs {
+    /// Output JSONL path.
+    #[arg(long, default_value = "data/survey-v1.jsonl")]
+    out: PathBuf,
+    /// Limit the number of packages considered.
+    #[arg(long)]
+    limit: Option<usize>,
+    /// Worker count.
+    #[arg(long, default_value_t = 4)]
+    jobs: usize,
+    /// Maximum versions to probe for docs, newest first.
+    #[arg(long = "max-versions", default_value_t = 4)]
+    max_versions: usize,
+    /// Pause between requests in each worker.
+    #[arg(long = "delay-ms", default_value_t = 100)]
+    delay_ms: u64,
+    /// Shard as `index/count`, starting at zero.
+    #[arg(long)]
+    shard: Option<String>,
+    /// Override the cache directory.
+    #[arg(long = "cache-dir")]
+    cache_dir: Option<PathBuf>,
+    /// Use only cached data.
+    #[arg(long)]
+    offline: bool,
+    /// Refetch mutable artifacts.
+    #[arg(long)]
+    refresh: bool,
+}
+
+#[derive(Debug, Args)]
+struct SurveyReportArgs {
+    /// Input JSONL path.
+    #[arg(long, default_value = "data/survey-v1.jsonl")]
+    input: PathBuf,
+    /// Write Markdown here instead of stdout.
+    #[arg(long)]
+    out: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
 struct SchemaArgs {
     /// Schema name.
     #[arg(value_enum, default_value_t = SchemaName::Report)]
@@ -259,6 +317,8 @@ enum SchemaName {
     Report,
     /// The reverse-dependency blast-radius report.
     BlastRadius,
+    /// One survey JSONL record.
+    Survey,
 }
 
 #[derive(Debug, Args)]
@@ -317,6 +377,7 @@ fn run(cli: Cli) -> Result<u8> {
         Command::Cache(args) => run_cache(args),
         Command::Index(args) => run_index(args),
         Command::BlastRadius(args) => run_blast_radius(args),
+        Command::Survey(args) => run_survey(args),
     }
 }
 
@@ -978,6 +1039,57 @@ fn write_file(path: &Path, text: &str) -> Result<()> {
     fs::write(path, text).with_context(|| format!("write {}", path.display()))
 }
 
+fn run_survey(args: SurveyArgs) -> Result<u8> {
+    match args.command {
+        SurveyCommand::Run(args) => {
+            let cache = cache_dir(args.cache_dir.as_ref())?;
+            let shard = match args.shard.as_deref() {
+                Some(value) => Some(parse_shard(value)?),
+                None => None,
+            };
+            let options = SurveyOptions {
+                cache_dir: cache,
+                output: args.out,
+                limit: args.limit,
+                jobs: args.jobs,
+                delay: std::time::Duration::from_millis(args.delay_ms),
+                offline: args.offline,
+                refresh: args.refresh,
+                shard,
+                max_versions: args.max_versions,
+            };
+            let summary = survey_run(&options)?;
+            println!(
+                "survey: {} packages selected, {} analyzed, {} skipped, {} violation candidates",
+                summary.packages, summary.analyzed, summary.skipped, summary.violation_candidates
+            );
+        }
+        SurveyCommand::Report(args) => {
+            let text = survey_report(&args.input, args.out.as_deref())?;
+            if args.out.is_none() {
+                write_stdout(&text)?;
+            }
+        }
+    }
+    Ok(0)
+}
+
+fn parse_shard(value: &str) -> Result<(usize, usize)> {
+    let (index, count) = value
+        .split_once('/')
+        .context("--shard must look like index/count")?;
+    let index = index
+        .parse::<usize>()
+        .context("shard index is not a number")?;
+    let count = count
+        .parse::<usize>()
+        .context("shard count is not a number")?;
+    if count == 0 || index >= count {
+        bail!("--shard requires 0 <= index < count and count > 0");
+    }
+    Ok((index, count))
+}
+
 fn write_stdout(text: &str) -> Result<()> {
     let mut stdout = std::io::stdout().lock();
     match stdout.write_all(text.as_bytes()) {
@@ -992,6 +1104,7 @@ fn run_schema(args: SchemaArgs) -> Result<u8> {
     let value = match args.name {
         SchemaName::Report => Report::schema_value(),
         SchemaName::BlastRadius => BlastReport::schema_value(),
+        SchemaName::Survey => record_schema(),
     };
     let mut text = serde_json::to_string_pretty(&value)?;
     text.push('\n');

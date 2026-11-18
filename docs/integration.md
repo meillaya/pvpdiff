@@ -84,14 +84,15 @@ PVP is a community policy, not enforced by Hackage. The realistic sequence is:
 ## 3. Reverse-dependency blast radius
 
 `01-index.tar.gz` is the only bulk source with dependency bounds. The reverse
-page (`/package/<pkg>/reverse`) lists 5,130 dependents for text but shows no
-bounds, so it cannot answer "whose range excludes the new version". Sync the
-index explicitly and keep it cached; do not scan it per invocation.
+page (`/package/<pkg>/reverse`) lists dependents but shows no bounds, so it
+cannot answer "whose range excludes the new version". Sync the index explicitly
+and keep it cached; do not scan it per invocation.
 
 Stackage snapshots pin versions, not dependents' bounds. Joining a snapshot's
 `cabal.config` with the scanned index data answers "which snapshot packages
-would exclude the new version"; it is a P3/P4 filter, not a v1 dependency.
-Stackage exposes no machine-readable build-report API, so do not scrape it.
+would exclude the new version". The CLI exposes this as `--stackage`, and the
+report keeps the index digest so the count is reproducible. Stackage exposes no
+machine-readable build-report API, so do not scrape it.
 
 ## 4. Data hygiene and rate limits
 

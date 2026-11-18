@@ -16,6 +16,7 @@ path = "src/main.rs"
 pvpdiff-core = { path = "../pvpdiff-core" }
 pvpdiff-hackage = { path = "../pvpdiff-hackage" }
 pvpdiff-index = { path = "../pvpdiff-index" }
+pvpdiff-survey = { path = "../pvpdiff-survey" }
 pvpdiff-parse = { path = "../pvpdiff-parse" }
 anyhow.workspace = true
 clap.workspace = true

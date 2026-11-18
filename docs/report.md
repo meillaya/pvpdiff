@@ -118,10 +118,12 @@ reproducibility anchor.
 
 ### 1.2 Survey record, `schema: 1` (P4)
 
-One JSON object per line in `data/survey-v1.jsonl`, with package, chosen pair,
-classification/assessment, counts, rule histogram, input digests, and
-diagnostics. The aggregate `survey report` is derived from the JSONL and carries
-the methodology/coverage table.
+One JSON object per line in `data/survey-v1.jsonl`. An analyzed record carries
+package, chosen pair, classification/assessment, observed bump, counts, a rule
+histogram, change and unknown counts, docs digests, and diagnostic codes. A
+skipped record carries the package, reason, and probed versions. The aggregate
+`survey report` is derived from the JSONL and carries the methodology and
+coverage table.
 
 ## 2. Determinism and schema discipline
 

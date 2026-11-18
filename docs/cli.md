@@ -1,7 +1,7 @@
 # CLI contract
 
-Status: P1 through P3 ship `diff`, `check`, `index`, `blast-radius`, `schema`,
-`rules`, and `cache`. The survey arrives with P4. Commands are added to
+Status: `diff`, `check`, `index`, `blast-radius`, `survey`, `schema`, `rules`,
+and `cache` are implemented. Commands are added to
 [CHANGELOG.md](../CHANGELOG.md) when they land.
 
 ## Commands
@@ -28,7 +28,10 @@ pvpdiff blast-radius --package <pkg> --new-version <ver>
 
 pvpdiff index sync|status [--cache-dir <dir>] [--offline] [--refresh]
                           [--index-url <url>]
-pvpdiff survey run|report [--limit N] [--jobs N] [--shard N/M] [--out <file>]
+pvpdiff survey run [--out <file>] [--limit N] [--jobs N] [--max-versions N]
+                   [--delay-ms N] [--shard I/N] [--cache-dir <dir>]
+                   [--offline] [--refresh]
+pvpdiff survey report [--input <file>] [--out <file>]
 pvpdiff schema [report|blast-radius|survey]
 pvpdiff rules [--format text|json]
 pvpdiff cache dir|clean
@@ -64,6 +67,10 @@ $ pvpdiff blast-radius --package text --new-version 2.1.4 \
 # filter the report to a Stackage snapshot
 $ pvpdiff blast-radius --package text --new-version 2.1.4 \
     --stackage lts-24.67
+
+# resumable survey; the default output is data/survey-v1.jsonl
+$ pvpdiff survey run --limit 5000 --jobs 4 --delay-ms 200
+$ pvpdiff survey report --input data/survey-v1.jsonl
 ```
 
 ## Output rules
@@ -106,3 +113,8 @@ cargo-semver-checks' exit-code convention.
 - `pvpdiff index sync` is a conditional GET of the 141 MB `01-index.tar.gz`.
   It writes a JSONL dependency database and metadata under `<cache>/index/`.
   A warm run uses the ETag and returns `304` without reparsing.
+- `pvpdiff survey run` is resumable: records already present for a package pair
+  are skipped. A skipped record is terminal on later runs; remove it or use a
+  fresh output file to retry a transient fetch failure.
+- `pvpdiff survey report` is deterministic. JSONL record order can vary with
+  worker scheduling; the aggregate report sorts its input.

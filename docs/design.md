@@ -32,12 +32,14 @@ compiles the package in Hackage mode and never uses GHC interface files.
 |---|---|---|---|
 | `pvpdiff-parse` | normalized model, Hoogle `.txt` parser, Cabal adapter | `cabalist-parser`, `serde`, `thiserror` | network, PVP rules, output formats |
 | `pvpdiff-core` | normalization, diff, classification, version math, JSON/SARIF/Markdown/Text reports | `pvpdiff-parse`, `serde`, `serde_json`, `schemars`, `serde-sarif` | HTTP, cache paths, CLI parsing |
-| `pvpdiff-hackage` | URL layout, blocking HTTP, ETag/content cache, `01-index.tar.gz` reader, Stackage pins | `reqwest`, `flate2`, `tar`, hashes, `directories` | Hoogle/Cabal parsing, PVP semantics |
-| `pvpdiff-cli` | argument parsing, orchestration, progress, exit codes | all of the above, `clap`, `anyhow`, `indicatif` | business rules |
+| `pvpdiff-hackage` | URL layout, blocking HTTP, ETag/content cache, docs and Cabal fetches | `reqwest`, hashes, `directories` | Hoogle/Cabal parsing, PVP semantics |
+| `pvpdiff-index` | streaming `01-index.tar.gz` sync, JSONL dependency database, bounds evaluation, Stackage pins | `reqwest`, `flate2`, `tar`, `cabalist-parser`, core version math | Hoogle parsing, report rendering |
+| `pvpdiff-survey` | resumable all-Hackage survey, JSONL records, aggregate report | core, parse, hackage, index | CLI presentation |
+| `pvpdiff-cli` | argument parsing, orchestration, progress, exit codes | all of the above, `clap`, `anyhow` | business rules |
 
-The arrow is one-directional: CLI → {core, hackage}; core → parse; hackage is
-independent. `pvpdiff-hackage` returns bytes/paths so the parser stays testable
-offline.
+The arrow is one-directional: CLI → {core, hackage, index, survey}; core →
+parse; index → {core, parse}; survey → {core, parse, hackage, index};
+`pvpdiff-hackage` returns bytes/paths so the parser stays testable offline.
 
 ## 3. Data flow (Hackage mode)
 
@@ -152,15 +154,18 @@ pvpdiff index status
 ```
 
 It writes a JSONL dependency database plus metadata (index ETag/digest, counts);
-no SQLite dependency. Blast radius loads the database and evaluates Cabal
-version ranges for dependents of the target package. Stackage is a later join
-of snapshot pins with the same data.
+no SQLite dependency. Blast radius loads the database, selects the newest
+version of each dependent, and evaluates Cabal version ranges. A package whose
+newest version dropped the target dependency is not counted. Stackage is a join
+of snapshot pins with the same data. The survey reuses the index for its
+package/version list and writes resumable JSONL records.
 
 ## 9. Explicit non-goals
 
 No GHC/HIE in Hackage mode, no source parsing, no semantic/behaviour checks, no
 role or family-equation detection, no automatic version bumping, no Hackage
-server enforcement, no Stackage solver. These follow from the data and from the
+server enforcement, no Stackage solver, no test-suite dependency accounting in
+the blast-radius report. These follow from the data and from the
 advisory positioning; they are listed in [limitations](limitations.md).
 
 ## 10. Deliverable shape

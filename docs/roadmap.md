@@ -9,7 +9,7 @@ earlier ones. Estimates assume part-time work.
 | P1 | Hackage diff MVP: parser, normalizer, PVP rules, version suggestion, changelog skeleton, Hackage client/cache, CLI `diff/schema/rules`, eight golden pairs | **Done** |
 | P2 | SARIF, local `check` mode, composite GitHub Action, cargo-dist releases, GHC integration job | **Done** |
 | P3 | Hackage index sync, reverse-dependency blast radius, Stackage filter | **Done** |
-| P4 | All-Hackage survey, dataset + "PVP in the wild" report, advisory integration outreach | Planned |
+| P4 | All-Hackage survey, dataset + "PVP in the wild" report, advisory integration outreach | **In progress** |
 
 ## P0: Scaffold
 

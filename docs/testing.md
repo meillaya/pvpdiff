@@ -1,8 +1,9 @@
 # Testing
 
-Status: P1 through P3 suites are implemented, including the eight golden pairs,
+Status: P1 through P4 suites are implemented, including the eight golden pairs,
 schema drift, SARIF shape, local `check`, the Action, index sync, range
-evaluation, and blast-radius status rules. P4 tests are added with the survey.
+evaluation, blast-radius status rules, survey selection, resume, and report
+aggregation.
 
 ## 1. Default suite (offline)
 
@@ -22,6 +23,7 @@ sandbox with no network and no real Hackage fixtures. Network access is opt-in.
 | Index | `crates/pvpdiff-hackage/tests/index.rs` | synthetic `.tar.gz`, revisions last-entry-wins, unparseable Cabal, range `contains`, latest version, blast-radius categories |
 | Schema drift | `crates/pvpdiff-core/tests/schema.rs` | committed report schema equals generated; `pvpdiff schema` equals committed |
 | Index and blast | `crates/pvpdiff-index/src/*` tests | synthetic tar revisions, range evaluation, status rules, snapshot pins |
+| Survey | `crates/pvpdiff-survey/src/*` tests | selection, shard, limit, newest-two probing, resume, torn-tail repair, report aggregation, schema |
 | Property/robustness | parser/adapters | `proptest` arbitrary bytes/text never panics; reflexivity (same input → no changes) |
 | Fuzz | `fuzz/` | Hoogle parser and Cabal adapter targets; a 1 h campaign before v0.1.0 |
 | Changelog/commit | repository | phase-gate check: `git log` has incremental green commits; each command/rule/schema/policy change includes a `CHANGELOG.md` hunk |
